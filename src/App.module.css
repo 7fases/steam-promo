@@ -391,13 +391,20 @@
   pointer-events: none;
 }
 .sp-game-name {
-  margin: 14px 0 0;
+  position: absolute;
+  bottom: 20px;
+  left: 12px;
+  right: 12px;
+  margin: 0;
   font-family: var(--sp-font-body);
-  font-size: clamp(1.1rem, 4vw, 1.4rem);
-  color: var(--sp-primary);
-  text-shadow: 2px 2px 0 var(--sp-primary-dark), 0 0 12px var(--sp-primary-glow);
+  font-size: clamp(0.9rem, 3vw, 1.1rem);
+  color: #fff;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
   word-break: break-word;
   line-height: 1.4;
+  z-index: 2;
+  max-height: 3.2em;
+  overflow: hidden;
 }
 /* Messages */
 .sp-msg {

@@ -79,15 +79,15 @@ function App() {
   // UX: hide enviar button when game already exists or on error until new search
   const [enviarBloqueado, setEnviarBloqueado] = useState(false);
   const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
-  const mostrarMensagem = (texto, tipo = 'info') => {
+  const mostrarMensagem = (texto, tipo = 'info', playSound = false) => {
     setMensagem({ texto, tipo });
     // Play sound based on type
     if (tipo === 'erro') {
-      new Audio('/error.mp3').play();
-    } else if (tipo === 'sucesso') {
-      new Audio('/entrou.mp3').play();
+      new Audio('/public/error.mp3').play();
+    } else if (playSound && tipo === 'sucesso') {
+      new Audio('/public/entrou.mp3').play();
     }
-    setTimeout(() => setMensagem({ texto: '', tipo: '' }), tipo === 'erro' ? 8000 : 4000);
+    setTimeout(() => setMensagem({ texto: '', tipo: '' }), (tipo === 'erro' || tipo === 'aviso') ? 8000 : 4000);
   };
   const buscar = async () => {
     if (!url.match(steamRegex)) {
@@ -109,6 +109,7 @@ function App() {
       res.nome = cleanGameName(res.nome);
       setGameAtual(res);
       mostrarMensagem('✅ Jogo encontrado!', 'sucesso');
+      setUrl('');
     } catch (error) {
       mostrarMensagem(`❌ ${error.message}`, 'erro');
     } finally {
@@ -133,7 +134,7 @@ function App() {
       });
       const res = await response.json();
       if (res.status === 'ok') {
-        mostrarMensagem(res.mensagem, 'sucesso');
+        mostrarMensagem(res.mensagem, 'sucesso', true);
         if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
         setGameAtual(null);
         setUrl('');
@@ -191,11 +192,11 @@ function App() {
           <p className={styles['sp-social-label']}>Acompanhe as promos pelo Discord e Telegram</p>
           <div className={styles['sp-social-btns']}>
             <a href="https://t.me/steampromocao" target="_blank" rel="noopener noreferrer" className={`${styles['sp-sbtn']} ${styles['sp-tg']}`}>
-              <img src="/telegram.svg" alt="Telegram" width="20" height="20" />
+              <img src="/public/telegram.svg" alt="Telegram" width="20" height="20" />
               <span>Telegram</span>
             </a>
             <a href="https://discord.com/invite/GjpMBK3kA6" target="_blank" rel="noopener noreferrer" className={`${styles['sp-sbtn']} ${styles['sp-dc']}`}>
-              <img src="/discord.svg" alt="Discord" width="20" height="20" />
+              <img src="/public/discord.svg" alt="Discord" width="20" height="20" />
               <span>Discord</span>
             </a>
           </div>
@@ -237,8 +238,8 @@ function App() {
             <div className={styles['sp-img-frame']}>
               <img src={gameAtual.imagem} alt={gameAtual.nome} />
               <div className={styles['sp-img-overlay']} />
+              <p className={styles['sp-game-name']}>🎮 {gameAtual.nome}</p>
             </div>
-            <p className={styles['sp-game-name']}>🎮 {gameAtual.nome}</p>
           </div>
         )}
         {gameAtual && !enviarBloqueado && (
