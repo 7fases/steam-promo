@@ -70,6 +70,8 @@ function cleanGameName(name) {
   name = name.replace(/^Save \d+% on /i, '');
   // Remover emojis ou símbolos indesejados (ex: se começar com emoji, remover)
   name = name.replace(/^[^a-zA-Z0-9]+/, '');
+  // Remover sufixos e prefixos especiais como ™, ®, ©, etc.
+  name = name.replace(/[\u2122\u00AE\u00A9\u2120]+/g, '');
   // Remover "Base " se seguido de "Game", mas manter versão/DLC
   name = name.replace(/Base Game/g, 'Game');
   return name.trim();
