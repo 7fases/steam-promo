@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import styles from './App.module.css';
 import telegramIcon from './assets/telegram.svg';
 import discordIcon from './assets/discord.svg';
+import errorMp3 from './assets/error.mp3';
+import entrouMp3 from './assets/entrou.mp3';
 
 // Particles canvas
 function Particles() {
@@ -85,13 +87,11 @@ function App() {
     setMensagem({ texto, tipo });
     // Play sound based on type
     if (tipo === 'erro') {
-      new Audio('/public/error.mp3').play();
+      new Audio(errorMp3).play();
     } else if (playSound && tipo === 'sucesso') {
-      new Audio('/public/entrou.mp3').play();
+      new Audio(entrouMp3).play();
     }
-    if (tipo !== 'erro') {
-      setTimeout(() => setMensagem({ texto: '', tipo: '' }), 4000);
-    }
+    setTimeout(() => setMensagem({ texto: '', tipo: '' }), 14000);
   };
   const buscar = async () => {
     if (!url.match(steamRegex)) {
@@ -165,21 +165,13 @@ function App() {
       <Particles />
       <div className={styles['sp-scanlines']} />
       <div className={styles['sp-card']}>
-        {/* Profile avatar - agora fixed top right, como link */}
-        <a
-          href="https://www.youtube.com/@7fases"
-          target="_blank"
-          rel="noopener noreferrer"
-          className={styles['sp-avatar']}
-        >
-          <div className={`${styles['sp-pixels']} ${styles['sp-pixels-desktop']}`}>
-            {[...Array(8)].map((_, i) => <span key={i} className={styles['sp-px']} />)}
-          </div>
+        {/* Profile avatar - agora centralizado no topo */}
+        <div className={styles['sp-avatar']}>
           <img
             src="https://7fases.github.io/youtube/imagens/Logo%20versao%202.0.webp"
             alt="7Fases"
           />
-        </a>
+        </div>
         <span className={`${styles['sp-corner']} ${styles['sp-tl']}`} />
         <span className={`${styles['sp-corner']} ${styles['sp-tr']}`} />
         <span className={`${styles['sp-corner']} ${styles['sp-bl']}`} />
@@ -278,6 +270,10 @@ function App() {
           </div>
           <p className={styles['sp-footer-text']}>🎮 STEAM PROMO 2.0 🛡</p>
         </footer>
+        {/* Pixels desktop repositionados */}
+        <div className={styles['sp-pixels-desktop']}>
+          {[...Array(8)].map((_, i) => <span key={i} className={styles['sp-px']} />)}
+        </div>
       </div>
     </div>
   );
