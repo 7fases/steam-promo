@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './App.module.css';
+import telegramIcon from './assets/telegram.svg';
+import discordIcon from './assets/discord.svg';
 
 // Particles canvas
 function Particles() {
@@ -192,11 +194,11 @@ function App() {
           <p className={styles['sp-social-label']}>Acompanhe as promos pelo Discord e Telegram</p>
           <div className={styles['sp-social-btns']}>
             <a href="https://t.me/steampromocao" target="_blank" rel="noopener noreferrer" className={`${styles['sp-sbtn']} ${styles['sp-tg']}`}>
-              <img src="/public/telegram.svg" alt="Telegram" width="20" height="20" />
+              <img src={telegramIcon} alt="Telegram" width="20" height="20" />
               <span>Telegram</span>
             </a>
             <a href="https://discord.com/invite/GjpMBK3kA6" target="_blank" rel="noopener noreferrer" className={`${styles['sp-sbtn']} ${styles['sp-dc']}`}>
-              <img src="/public/discord.svg" alt="Discord" width="20" height="20" />
+              <img src={discordIcon} alt="Discord" width="20" height="20" />
               <span>Discord</span>
             </a>
           </div>

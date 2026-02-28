@@ -490,7 +490,7 @@
   .sp-avatar { width: 68px; height: 68px; top: -34px; }
   .sp-footer {
     position: absolute;
-    left: -80px;
+    left: -85px;
     top: 50%;
     transform: translateY(-50%) rotate(-90deg);
     margin-top: 0;
@@ -500,12 +500,13 @@
     align-items: center;
     justify-content: center;
     gap: 10px;
+    flex-direction: row-reverse;
   }
   .sp-pixels {
     flex-direction: column;
     gap: 6px;
     margin-bottom: 0;
-    margin-right: 10px;
+    margin-left: 10px;
   }
   @keyframes sp-pixel-dance {
     0%,100% { transform: translateX(0); opacity:0.6; }
