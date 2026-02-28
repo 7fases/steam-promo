@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './App.module.css';
+import telegramIcon from './assets/telegram.svg';
+import discordIcon from './assets/discord.svg';
 
 // Particles canvas
 function Particles() {
@@ -79,15 +81,17 @@ function App() {
   // UX: hide enviar button when game already exists or on error until new search
   const [enviarBloqueado, setEnviarBloqueado] = useState(false);
   const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
-  const mostrarMensagem = (texto, tipo = 'info') => {
+  const mostrarMensagem = (texto, tipo = 'info', playSound = false) => {
     setMensagem({ texto, tipo });
     // Play sound based on type
     if (tipo === 'erro') {
-      new Audio('/error.mp3').play();
-    } else if (tipo === 'sucesso') {
-      new Audio('/entrou.mp3').play();
+      new Audio('/public/error.mp3').play();
+    } else if (playSound && tipo === 'sucesso') {
+      new Audio('/public/entrou.mp3').play();
     }
-    setTimeout(() => setMensagem({ texto: '', tipo: '' }), tipo === 'erro' ? 8000 : 4000);
+    if (tipo !== 'erro') {
+      setTimeout(() => setMensagem({ texto: '', tipo: '' }), 4000);
+    }
   };
   const buscar = async () => {
     if (!url.match(steamRegex)) {
@@ -109,6 +113,7 @@ function App() {
       res.nome = cleanGameName(res.nome);
       setGameAtual(res);
       mostrarMensagem('✅ Jogo encontrado!', 'sucesso');
+      setUrl('');
     } catch (error) {
       mostrarMensagem(`❌ ${error.message}`, 'erro');
     } finally {
@@ -133,7 +138,7 @@ function App() {
       });
       const res = await response.json();
       if (res.status === 'ok') {
-        mostrarMensagem(res.mensagem, 'sucesso');
+        mostrarMensagem(res.mensagem, 'sucesso', true);
         if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
         setGameAtual(null);
         setUrl('');
@@ -160,13 +165,21 @@ function App() {
       <Particles />
       <div className={styles['sp-scanlines']} />
       <div className={styles['sp-card']}>
-        {/* Profile avatar - agora dentro do card */}
-        <div className={styles['sp-avatar']}>
+        {/* Profile avatar - agora fixed top right, como link */}
+        <a
+          href="https://www.youtube.com/@7fases"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles['sp-avatar']}
+        >
+          <div className={`${styles['sp-pixels']} ${styles['sp-pixels-desktop']}`}>
+            {[...Array(8)].map((_, i) => <span key={i} className={styles['sp-px']} />)}
+          </div>
           <img
             src="https://7fases.github.io/youtube/imagens/Logo%20versao%202.0.webp"
             alt="7Fases"
           />
-        </div>
+        </a>
         <span className={`${styles['sp-corner']} ${styles['sp-tl']}`} />
         <span className={`${styles['sp-corner']} ${styles['sp-tr']}`} />
         <span className={`${styles['sp-corner']} ${styles['sp-bl']}`} />
@@ -191,11 +204,11 @@ function App() {
           <p className={styles['sp-social-label']}>Acompanhe as promos pelo Discord e Telegram</p>
           <div className={styles['sp-social-btns']}>
             <a href="https://t.me/steampromocao" target="_blank" rel="noopener noreferrer" className={`${styles['sp-sbtn']} ${styles['sp-tg']}`}>
-              <img src="/telegram.svg" alt="Telegram" width="20" height="20" />
+              <img src={telegramIcon} alt="Telegram" width="20" height="20" />
               <span>Telegram</span>
             </a>
             <a href="https://discord.com/invite/GjpMBK3kA6" target="_blank" rel="noopener noreferrer" className={`${styles['sp-sbtn']} ${styles['sp-dc']}`}>
-              <img src="/discord.svg" alt="Discord" width="20" height="20" />
+              <img src={discordIcon} alt="Discord" width="20" height="20" />
               <span>Discord</span>
             </a>
           </div>
@@ -237,8 +250,8 @@ function App() {
             <div className={styles['sp-img-frame']}>
               <img src={gameAtual.imagem} alt={gameAtual.nome} />
               <div className={styles['sp-img-overlay']} />
+              <p className={styles['sp-game-name']}>🎮 {gameAtual.nome}</p>
             </div>
-            <p className={styles['sp-game-name']}>🎮 {gameAtual.nome}</p>
           </div>
         )}
         {gameAtual && !enviarBloqueado && (

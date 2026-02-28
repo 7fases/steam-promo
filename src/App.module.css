@@ -52,12 +52,11 @@
     rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px
   );
 }
-/* Avatar - agora absolute no topo central do card */
+/* Avatar - agora fixed no topo direito em todos os tamanhos */
 .sp-avatar {
-  position: absolute;
-  top: -27px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: fixed;
+  top: 16px;
+  right: 16px;
   z-index: 100;
   width: 54px;
   height: 54px;
@@ -68,12 +67,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.sp-avatar:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 0 3px var(--sp-primary-dark), 0 0 32px var(--sp-primary-glow);
 }
 .sp-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   border-radius: 50%;
+}
+/* Pixels desktop (escondidos por padrão) */
+.sp-pixels-desktop {
+  display: none;
 }
 /* Card */
 .sp-card {
@@ -391,13 +400,20 @@
   pointer-events: none;
 }
 .sp-game-name {
-  margin: 14px 0 0;
+  position: absolute;
+  bottom: 20px;
+  left: 12px;
+  right: 12px;
+  margin: 0;
   font-family: var(--sp-font-body);
-  font-size: clamp(1.1rem, 4vw, 1.4rem);
-  color: var(--sp-primary);
-  text-shadow: 2px 2px 0 var(--sp-primary-dark), 0 0 12px var(--sp-primary-glow);
+  font-size: clamp(0.9rem, 3vw, 1.1rem);
+  color: #fff;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
   word-break: break-word;
   line-height: 1.4;
+  z-index: 2;
+  max-height: 3.2em;
+  overflow: hidden;
 }
 /* Messages */
 .sp-msg {
@@ -474,13 +490,38 @@
 @media (min-width: 480px) {
   .sp-wrap { padding: 72px 16px 56px; }
   .sp-card { padding: 36px 32px 28px; }
-  .sp-avatar { width: 62px; height: 62px; top: -31px; }
+  .sp-avatar { width: 62px; height: 62px; top: 16px; right: 16px; }
 }
 @media (min-width: 768px) {
   .sp-wrap { padding: 80px 24px 60px; }
   .sp-card { max-width: 680px; padding: 44px 40px 36px; }
   .sp-img-frame img { max-height: 300px; }
-  .sp-avatar { width: 68px; height: 68px; top: -34px; }
+  .sp-avatar { width: 68px; height: 68px; top: 20px; right: 24px; }
+  .sp-footer {
+    display: none;
+  }
+  .sp-pixels-desktop {
+    display: flex;
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    gap: 2px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    width: 50px;
+    height: auto;
+  }
+  .sp-avatar img {
+    position: relative;
+    z-index: 2;
+  }
+  @keyframes sp-pixel-dance {
+    0%,100% { transform: translateY(0); opacity:0.6; }
+    50%      { transform: translateY(-4px); opacity:1; }
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
