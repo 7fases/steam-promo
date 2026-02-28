@@ -4,45 +4,45 @@ import styles from './App.module.css';
 function App() {
   const [url, setUrl] = useState('');
   const [gameAtual, setGameAtual] = useState(null);
-  const [mensagem, setMensagem] = useState('');
+  const [mensagem, setMensagem] = useState({ texto: '', tipo: '' }); // tipo: 'info', 'sucesso', 'erro', 'aviso'
   const [loading, setLoading] = useState(false);
 
   const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
 
+  const mostrarMensagem = (texto, tipo = 'info') => {
+    setMensagem({ texto, tipo });
+    // Remove a mensagem após 4 segundos, exceto erros que ficam até nova ação
+    if (tipo !== 'erro') {
+      setTimeout(() => setMensagem({ texto: '', tipo: '' }), 4000);
+    }
+  };
+
   const buscar = async () => {
     if (!url.match(steamRegex)) {
-      setMensagem('⚠️ URL inválida! Insira uma URL válida da Steam.');
+      mostrarMensagem('⚠️ URL inválida! Insira uma URL da Steam.', 'erro');
       return;
     }
-    setMensagem('⏳ Buscando dados...');
+    mostrarMensagem('⏳ Buscando dados...', 'info');
     setLoading(true);
 
     try {
       const response = await fetch('https://steam-promo.vercel.app/api/google', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          acao: 'buscar',
-          url: url,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ acao: 'buscar', url }),
       });
 
       const res = await response.json();
 
-      if (res.status !== 'ok') {
-        setMensagem(`❌ ${res.mensagem}`);
-        setLoading(false);
-        return;
+      if (!response.ok || res.status !== 'ok') {
+        throw new Error(res.mensagem || 'Erro ao buscar jogo');
       }
 
       setGameAtual(res);
-      setMensagem('✅ Game encontrado!');
-      setTimeout(() => setMensagem(''), 2000);
-      setLoading(false);
+      mostrarMensagem('✅ Jogo encontrado!', 'sucesso');
     } catch (error) {
-      setMensagem('❌ Erro ao buscar dados.');
+      mostrarMensagem(`❌ ${error.message}`, 'erro');
+    } finally {
       setLoading(false);
     }
   };
@@ -50,19 +50,17 @@ function App() {
   const enviar = async () => {
     if (!gameAtual) return;
 
-    setMensagem('⏳ Enviando sugestão...');
+    mostrarMensagem('⏳ Enviando sugestão...', 'info');
     setLoading(true);
 
     try {
       const response = await fetch('https://steam-promo.vercel.app/api/google', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           acao: 'salvar',
           nome: gameAtual.nome,
-          url: url,
+          url,
           id: gameAtual.id,
           tipo: gameAtual.tipo,
         }),
@@ -70,74 +68,86 @@ function App() {
 
       const res = await response.json();
 
-      setMensagem(res.mensagem);
-
       if (res.status === 'ok') {
+        mostrarMensagem(res.mensagem, 'sucesso');
         setGameAtual(null);
         setUrl('');
+      } else if (res.status === 'existe') {
+        mostrarMensagem(res.mensagem, 'aviso');
+      } else {
+        throw new Error(res.mensagem || 'Erro ao enviar');
       }
-
-      setLoading(false);
     } catch (error) {
-      setMensagem('❌ Erro ao enviar sugestão.');
+      mostrarMensagem(`❌ ${error.message}`, 'erro');
+    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className={styles.body}>
+    <div className={styles.appContainer}>
       <div className={styles.card}>
-        <div className={styles.cornerBl}></div>
-        <div className={styles.cornerBr}></div>
         <h1>⚔️ STEAM PROMO ⚔️</h1>
         <p className={styles.subtitle}>Rastreador de Preços</p>
-        <div className={styles.divider}></div>
-        <label className={styles.fieldLabel}>🎮 URL DA STEAM:</label>
+        <div className={styles.divider} />
+
+        <label className={styles.label} htmlFor="url">
+          🎮 URL DA STEAM:
+        </label>
         <input
           type="text"
           id="url"
+          className={styles.input}
           placeholder="Cole a URL da Steam aqui..."
-          title="Digite aqui a URL exata da versão desejada do game na Steam"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          className={styles.input}
+          disabled={loading}
         />
-        <button onClick={buscar} disabled={loading} className={styles.button}>
-          Buscar Game
+
+        <button
+          onClick={buscar}
+          disabled={loading}
+          className={styles.button}
+          data-icon="🔍"
+        >
+          {loading ? 'BUSCANDO...' : 'BUSCAR GAME'}
         </button>
-        {gameAtual && gameAtual.imagem && (
+
+        {gameAtual?.imagem && (
           <div className={styles.imgFrame}>
-            <img src={gameAtual.imagem} alt="Capa do Game" />
+            <img src={gameAtual.imagem} alt={`Capa de ${gameAtual.nome}`} />
           </div>
         )}
-        {gameAtual && <div className={styles.nomeGame}>🏰 {gameAtual.nome}</div>}
+
         {gameAtual && (
-          <button onClick={enviar} disabled={loading} className={styles.btnEnviar}>
-            Enviar Sugestão
-          </button>
+          <>
+            <div className={styles.nomeGame}>🏰 {gameAtual.nome}</div>
+            <button
+              onClick={enviar}
+              disabled={loading}
+              className={`${styles.button} ${styles.buttonVerde}`}
+              data-icon="📨"
+            >
+              {loading ? 'ENVIANDO...' : 'ENVIAR SUGESTÃO'}
+            </button>
+          </>
         )}
-        {mensagem && <div className={styles.msg}>{mensagem}</div>}
-        <div className={styles.divider}></div>
-        <div className={styles.statsBar}>
-          <div className={styles.stat}>
-            <span>HP</span>
-            <div className={styles.bar}>
-              <div className={styles.barFillHp}></div>
-            </div>
+
+        {mensagem.texto && (
+          <div className={`${styles.msg} ${styles[`msg${mensagem.tipo}`]}`}>
+            {mensagem.texto}
           </div>
-          <div className={styles.stat}>
-            <span>MP</span>
-            <div className={styles.bar}>
-              <div className={styles.barFillMp}></div>
-            </div>
-          </div>
-        </div>
+        )}
+
+        <div className={styles.divider} />
+
         <div className={styles.socialButtons}>
           <a
             href="https://t.me/steampromocao"
             target="_blank"
             rel="noopener noreferrer"
             className={`${styles.socialBtn} ${styles.socialBtnTelegram}`}
+            aria-label="Telegram (abre em nova aba)"
           >
             📱 Telegram
             <span className={styles.tooltip}>Entre no grupo do Telegram!</span>
@@ -147,12 +157,14 @@ function App() {
             target="_blank"
             rel="noopener noreferrer"
             className={`${styles.socialBtn} ${styles.socialBtnDiscord}`}
+            aria-label="Discord (abre em nova aba)"
           >
             💬 Discord
-            <span className={styles.tooltip}>Entre no grupo do Discord!</span>
+            <span className={styles.tooltip}>Entre no servidor do Discord!</span>
           </a>
         </div>
-        <div className={styles.footer}>🎮 STEAM PROMO v2.0 🛡️</div>
+
+        <footer className={styles.footer}>🎮 STEAM PROMO v2.0 🛡️</footer>
       </div>
     </div>
   );
