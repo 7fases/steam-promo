@@ -1,58 +1,79 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styles from './App.module.css';
 
-// Componente para gerar os fragmentos voando no fundo
-const BackgroundParticles = () => {
-  const [particles, setParticles] = useState([]);
-  
+// Particles canvas
+function Particles() {
+  const canvasRef = useRef(null);
   useEffect(() => {
-    const p = Array.from({ length: 25 }).map((_, i) => ({
-      id: i,
-      left: Math.random() * 100,
-      top: Math.random() * 100,
-      size: Math.random() * 6 + 2,
-      duration: Math.random() * 15 + 10,
-      delay: Math.random() * 5
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let animFrame;
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+    const SYMBOLS = ['◆', '▲', '●', '★', '♦', '⚔', '⚡', '✦', '◈', '▶'];
+    const COLORS = ['#ffcd4d', '#4d7eff', '#ff4d8d', '#4dffb0', '#ff8c4d', '#b04dff'];
+    const particles = Array.from({ length: 38 }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.7,
+      vy: (Math.random() - 0.5) * 0.7,
+      size: Math.floor(Math.random() * 3 + 1) * 4,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      symbol: SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],
+      alpha: Math.random() * 0.45 + 0.08,
+      rotation: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.018,
     }));
-    setParticles(p);
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rotation += p.rotSpeed;
+        if (p.x < -60) p.x = canvas.width + 60;
+        if (p.x > canvas.width + 60) p.x = -60;
+        if (p.y < -60) p.y = canvas.height + 60;
+        if (p.y > canvas.height + 60) p.y = -60;
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        ctx.font = `${p.size}px monospace`;
+        ctx.fillStyle = p.color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(p.symbol, 0, 0);
+        ctx.restore();
+      });
+      animFrame = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => {
+      cancelAnimationFrame(animFrame);
+      window.removeEventListener('resize', resize);
+    };
   }, []);
-
-  return (
-    <div className={styles.particleContainer}>
-      {particles.map(p => (
-        <div 
-          key={p.id}
-          className={styles.particle}
-          style={{
-            left: `${p.left}%`,
-            top: `${p.top}%`,
-            width: `${p.size}px`,
-            height: `${p.size}px`,
-            animationDuration: `${p.duration}s`,
-            animationDelay: `${p.delay}s`
-          }}
-        />
-      ))}
-    </div>
-  );
-};
-
+  return <canvas ref={canvasRef} className={styles['sp-canvas']} />;
+}
 function App() {
   const [url, setUrl] = useState('');
   const [gameAtual, setGameAtual] = useState(null);
-  const [mensagem, setMensagem] = useState({ texto: '', tipo: '' }); // tipo: 'info', 'sucesso', 'erro', 'aviso'
+  const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
   const [loading, setLoading] = useState(false);
-
+  // UX: hide enviar button when game already exists or on error until new search
+  const [enviarBloqueado, setEnviarBloqueado] = useState(false);
   const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
-
   const mostrarMensagem = (texto, tipo = 'info') => {
     setMensagem({ texto, tipo });
-    // Remove a mensagem após 4 segundos, exceto erros que ficam até nova ação
     if (tipo !== 'erro') {
       setTimeout(() => setMensagem({ texto: '', tipo: '' }), 4000);
     }
   };
-
   const buscar = async () => {
     if (!url.match(steamRegex)) {
       mostrarMensagem('⚠️ URL inválida! Insira uma URL da Steam.', 'erro');
@@ -60,36 +81,28 @@ function App() {
     }
     mostrarMensagem('⏳ Buscando dados...', 'info');
     setLoading(true);
-
+    setEnviarBloqueado(false);
+    setGameAtual(null);
     try {
       const response = await fetch('https://steam-promo.vercel.app/api/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ acao: 'buscar', url }),
       });
-
       const res = await response.json();
-
-      if (!response.ok || res.status !== 'ok') {
-        throw new Error(res.mensagem || 'Erro ao buscar jogo');
-      }
-
+      if (!response.ok || res.status !== 'ok') throw new Error(res.mensagem || 'Erro ao buscar jogo');
       setGameAtual(res);
       mostrarMensagem('✅ Jogo encontrado!', 'sucesso');
     } catch (error) {
       mostrarMensagem(`❌ ${error.message}`, 'erro');
-      setGameAtual(null); // UX: Hide button on search error
     } finally {
       setLoading(false);
     }
   };
-
   const enviar = async () => {
     if (!gameAtual) return;
-
     mostrarMensagem('⏳ Enviando sugestão...', 'info');
     setLoading(true);
-
     try {
       const response = await fetch('https://steam-promo.vercel.app/api/google', {
         method: 'POST',
@@ -102,120 +115,133 @@ function App() {
           tipo: gameAtual.tipo,
         }),
       });
-
       const res = await response.json();
-
       if (res.status === 'ok') {
         mostrarMensagem(res.mensagem, 'sucesso');
         setGameAtual(null);
         setUrl('');
+        setEnviarBloqueado(false);
       } else if (res.status === 'existe') {
         mostrarMensagem(res.mensagem, 'aviso');
-        setGameAtual(null); // UX: Hide send button if it already exists
+        setEnviarBloqueado(true); // hide enviar button: game already tracked
       } else {
         throw new Error(res.mensagem || 'Erro ao enviar');
       }
     } catch (error) {
       mostrarMensagem(`❌ ${error.message}`, 'erro');
-      setGameAtual(null); // UX: Hide send button on send error
+      setEnviarBloqueado(true);
     } finally {
       setLoading(false);
     }
   };
-
   return (
-    <div className={styles.appWrapper}>
-      <BackgroundParticles />
-      <div className={styles.scanlines} />
-      
-      <main className={styles.mainContainer}>
-        {/* Imagem de Perfil (Centralizada agora) */}
-        <div className={styles.profileBadge}>
-          <img 
-            src="https://7fases.github.io/youtube/imagens/Logo%20versao%202.0.webp" 
-            alt="Profile" 
-            className={styles.profileImg}
-          />
-        </div>
-
-        <header className={styles.header}>
-          <h1 className={styles.mainTitle}>⚔️ STEAM PROMO ⚔️</h1>
-          <h2 className={styles.subTitle}>Rastreador de Preços</h2>
-        </header>
-
-        <section className={styles.gameCard}>
-          <div className={styles.cardInner}>
-            <div className={styles.cornerTl} />
-            <div className={styles.cornerTr} />
-            
-            <div className={styles.inputGroup}>
-              <label className={styles.label}>🎮 URL DA STEAM:</label>
-              <input
-                className={styles.pixelInput}
-                type="text"
-                placeholder="Cole o link do jogo aqui..."
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                disabled={loading}
-              />
-              <button 
-                className={`${styles.pixelButton} ${styles.primaryBtn}`}
-                onClick={buscar}
-                disabled={loading}
-              >
-                {loading ? 'BUSCANDO...' : 'BUSCAR GAME'}
-              </button>
-            </div>
-
-            {gameAtual && (
-              <div className={styles.resultArea}>
-                <div className={styles.imageFrame}>
-                  <img src={gameAtual.imagem} alt={gameAtual.nome} className={styles.gameThumb} />
-                </div>
-                <h3 className={styles.gameTitle}>🏰 {gameAtual.nome}</h3>
-                <button 
-                  className={`${styles.pixelButton} ${styles.successBtn}`}
-                  onClick={enviar}
-                  disabled={loading}
-                >
-                  {loading ? 'ENVIANDO...' : 'ENVIAR SUGESTÃO'}
-                </button>
-              </div>
-            )}
-
-            {mensagem.texto && (
-              <div className={`${styles.statusMsg} ${styles[`msg${mensagem.tipo}`]}`}>
-                {mensagem.texto}
-              </div>
-            )}
-
-            <div className={styles.divider} />
-
-            <div className={styles.socialSection}>
-              <p className={styles.socialText}>Acompanhe as promos pelo Discord e Telegram</p>
-              <div className={styles.socialGrid}>
-                <a href="https://t.me/seulink" target="_blank" rel="noreferrer" className={styles.socialItem}>
-                  <div className={`${styles.socialIcon}`}>📱</div>
-                  <span>Telegram</span>
-                </a>
-                <a href="https://discord.gg/seulink" target="_blank" rel="noreferrer" className={styles.socialItem}>
-                  <div className={`${styles.socialIcon}`}>💬</div>
-                  <span>Discord</span>
-                </a>
-              </div>
-            </div>
-
-            <div className={styles.cornerBl} />
-            <div className={styles.cornerBr} />
+    <div className={styles['sp-wrap']}>
+      <Particles />
+      <div className={styles['sp-scanlines']} />
+      {/* Profile avatar */}
+      <a
+        href="https://github.com/7fases"
+        target="_blank"
+        rel="noopener noreferrer"
+        className={styles['sp-avatar']}
+        title="Criado por 7Fases"
+      >
+        <img
+          src="https://7fases.github.io/youtube/imagens/Logo%20versao%202.0.webp"
+          alt="7Fases"
+        />
+      </a>
+      <div className={styles['sp-card']}>
+        <span className={`${styles['sp-corner']} ${styles['sp-tl']}`} />
+        <span className={`${styles['sp-corner']} ${styles['sp-tr']}`} />
+        <span className={`${styles['sp-corner']} ${styles['sp-bl']}`} />
+        <span className={`${styles['sp-corner']} ${styles['sp-br']}`} />
+        {/* Header */}
+        <header className={styles['sp-header']}>
+          <span className={styles['sp-hicon']}>🎮</span>
+          <div className={styles['sp-title-block']}>
+            <h1 className={styles['sp-title']}>STEAM PROMO</h1>
+            <p className={styles['sp-subtitle']}>⚔ Rastreador de Preços ⚔</p>
           </div>
-        </section>
-
-        <footer className={styles.footer}>
-          <p>🎮 STEAM PROMO v2.0 🛡️</p>
+          <span className={styles['sp-hicon']}>🛡</span>
+        </header>
+        {/* Divider */}
+        <div className={styles['sp-divider']}>
+          <span className={styles['sp-dot']} />
+          <span className={styles['sp-line']} />
+          <span className={styles['sp-dot']} />
+        </div>
+        {/* Social */}
+        <div className={styles['sp-social-section']}>
+          <p className={styles['sp-social-label']}>Acompanhe as promos pelo Discord e Telegram</p>
+          <div className={styles['sp-social-btns']}>
+            <a href="https://t.me/steampromocao" target="_blank" rel="noopener noreferrer" className={`${styles['sp-sbtn']} ${styles['sp-tg']}`}>
+              <img src="/telegram.svg" alt="Telegram" width="20" height="20" />
+              <span>Telegram</span>
+            </a>
+            <a href="https://discord.com/invite/GjpMBK3kA6" target="_blank" rel="noopener noreferrer" className={`${styles['sp-sbtn']} ${styles['sp-dc']}`}>
+              <img src="/discord.svg" alt="Discord" width="20" height="20" />
+              <span>Discord</span>
+            </a>
+          </div>
+        </div>
+        {/* Divider */}
+        <div className={styles['sp-divider']}>
+          <span className={styles['sp-dot']} />
+          <span className={styles['sp-line']} />
+          <span className={styles['sp-dot']} />
+        </div>
+        {/* Form */}
+        <div className={styles['sp-form']}>
+          <label className={styles['sp-label']} htmlFor="steamUrl">🎮 URL DA STEAM:</label>
+          <input
+            id="steamUrl"
+            className={styles['sp-input']}
+            type="url"
+            placeholder="https://store.steampowered.com/app/..."
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && !loading && buscar()}
+            disabled={loading}
+          />
+          <button className={`${styles['sp-btn']} ${styles['sp-btn-yellow']}`} onClick={buscar} disabled={loading}>
+            {loading ? (
+              <span className={styles['sp-dots']}>BUSCANDO<span>.</span><span>.</span><span>.</span></span>
+            ) : '🔍 BUSCAR GAME'}
+          </button>
+        </div>
+        {/* Game result */}
+        {gameAtual?.imagem && (
+          <div className={styles['sp-game-card']}>
+            <div className={styles['sp-img-frame']}>
+              <img src={gameAtual.imagem} alt={gameAtual.nome} />
+              <div className={styles['sp-img-overlay']} />
+            </div>
+            <p className={styles['sp-game-name']}>🏰 {gameAtual.nome}</p>
+          </div>
+        )}
+        {gameAtual && !enviarBloqueado && (
+          <button className={`${styles['sp-btn']} ${styles['sp-btn-green']}`} onClick={enviar} disabled={loading}>
+            {loading ? (
+              <span className={styles['sp-dots']}>ENVIANDO<span>.</span><span>.</span><span>.</span></span>
+            ) : '⭐ ENVIAR SUGESTÃO'}
+          </button>
+        )}
+        {/* Message */}
+        {mensagem.texto && (
+          <div className={`${styles['sp-msg']} ${styles[`sp-${mensagem.tipo}`]}`}>
+            {mensagem.texto}
+          </div>
+        )}
+        {/* Footer */}
+        <footer className={styles['sp-footer']}>
+          <div className={styles['sp-pixels']}>
+            {[...Array(8)].map((_, i) => <span key={i} className={styles['sp-px']} />)}
+          </div>
+          <p className={styles['sp-footer-text']}>🎮 STEAM PROMO 2.0 🛡</p>
         </footer>
-      </main>
+      </div>
     </div>
   );
 }
-
 export default App;
