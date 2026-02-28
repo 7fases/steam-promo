@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import styles from './App.module.css';
 
+const PARTICLES = ['⚔️', '🛡️', '💎', '⭐', '🗡️', '✨', '🔮', '🏰', '👾', '🎮', '💫', '🌟'];
+
 function App() {
   const [url, setUrl] = useState('');
   const [gameAtual, setGameAtual] = useState(null);
-  const [mensagem, setMensagem] = useState({ texto: '', tipo: '' }); // tipo: 'info', 'sucesso', 'erro', 'aviso'
+  const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
   const [loading, setLoading] = useState(false);
+  const [envioFalhou, setEnvioFalhou] = useState(false);
 
   const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
 
   const mostrarMensagem = (texto, tipo = 'info') => {
     setMensagem({ texto, tipo });
-    // Remove a mensagem após 4 segundos, exceto erros que ficam até nova ação
     if (tipo !== 'erro') {
       setTimeout(() => setMensagem({ texto: '', tipo: '' }), 4000);
     }
@@ -24,6 +26,7 @@ function App() {
     }
     mostrarMensagem('⏳ Buscando dados...', 'info');
     setLoading(true);
+    setEnvioFalhou(false);
 
     try {
       const response = await fetch('https://steam-promo.vercel.app/api/google', {
@@ -74,11 +77,15 @@ function App() {
         setUrl('');
       } else if (res.status === 'existe') {
         mostrarMensagem(res.mensagem, 'aviso');
+        setEnvioFalhou(true);
+        setGameAtual(null);
       } else {
         throw new Error(res.mensagem || 'Erro ao enviar');
       }
     } catch (error) {
       mostrarMensagem(`❌ ${error.message}`, 'erro');
+      setEnvioFalhou(true);
+      setGameAtual(null);
     } finally {
       setLoading(false);
     }
@@ -86,85 +93,104 @@ function App() {
 
   return (
     <div className={styles.appContainer}>
-      <div className={styles.card}>
-        <h1>⚔️ STEAM PROMO ⚔️</h1>
-        <p className={styles.subtitle}>Rastreador de Preços</p>
-        <div className={styles.divider} />
+      <div className={styles.stars} />
+      <div className={styles.scanlines} />
+      {PARTICLES.map((p, i) => (
+        <span key={i} className={styles.particle}>{p}</span>
+      ))}
 
-        <label className={styles.label} htmlFor="url">
-          🎮 URL DA STEAM:
-        </label>
+      <div className={styles.card}>
+        <span className={styles.cornerBl} />
+        <span className={styles.cornerBr} />
+
+        <div className={styles.header}>
+          <h1 className={styles.title}>⚔️ STEAM PROMO ⚔️</h1>
+          <p className={styles.subtitle}>Rastreador de Preços</p>
+          <img
+            className={styles.avatar}
+            src="https://7fases.github.io/youtube/imagens/Logo%20versao%202.0.webp"
+            alt="Perfil Steam Promo"
+            loading="lazy"
+          />
+        </div>
+
+        <hr className={styles.divider} />
+
+        <label className={styles.label}>🎮 URL DA STEAM:</label>
         <input
-          type="text"
-          id="url"
           className={styles.input}
-          placeholder="Cole a URL da Steam aqui..."
+          type="url"
+          placeholder="https://store.steampowered.com/app/..."
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           disabled={loading}
         />
 
         <button
+          className={styles.button}
           onClick={buscar}
           disabled={loading}
-          className={styles.button}
-          data-icon="🔍"
         >
-          {loading ? 'BUSCANDO...' : 'BUSCAR GAME'}
+          {loading ? '⏳ BUSCANDO...' : '🔍 BUSCAR GAME'}
         </button>
 
         {gameAtual?.imagem && (
           <div className={styles.imgFrame}>
-            <img src={gameAtual.imagem} alt={`Capa de ${gameAtual.nome}`} />
+            <img src={gameAtual.imagem} alt={gameAtual.nome} />
           </div>
         )}
 
-        {gameAtual && (
+        {gameAtual && !envioFalhou && (
           <>
-            <div className={styles.nomeGame}>🏰 {gameAtual.nome}</div>
+            <p className={styles.nomeGame}>🏰 {gameAtual.nome}</p>
             <button
+              className={`${styles.button} ${styles.buttonVerde}`}
               onClick={enviar}
               disabled={loading}
-              className={`${styles.button} ${styles.buttonVerde}`}
-              data-icon="📨"
             >
-              {loading ? 'ENVIANDO...' : 'ENVIAR SUGESTÃO'}
+              {loading ? '⏳ ENVIANDO...' : '📩 ENVIAR SUGESTÃO'}
             </button>
           </>
         )}
 
         {mensagem.texto && (
-          <div className={`${styles.msg} ${styles[`msg${mensagem.tipo}`]}`}>
+          <div className={`${styles.msg} ${styles['msg' + mensagem.tipo]}`}>
             {mensagem.texto}
           </div>
         )}
 
-        <div className={styles.divider} />
+        <hr className={styles.divider} />
+
+        <p className={styles.socialHeading}>
+          📢 Acompanhe as promos pelo Discord e Telegram
+        </p>
 
         <div className={styles.socialButtons}>
           <a
-            href="https://t.me/steampromocao"
+            href="https://t.me/steampromo"
             target="_blank"
             rel="noopener noreferrer"
             className={`${styles.socialBtn} ${styles.socialBtnTelegram}`}
-            aria-label="Telegram (abre em nova aba)"
           >
-            📱 Telegram
             <span className={styles.tooltip}>Entre no grupo do Telegram!</span>
+            <span className={styles.socialBtnIcon}>📱</span>
+            Telegram
+            <span className={styles.socialBtnLabel}>Grupo de ofertas</span>
           </a>
           <a
-            href="https://discord.gg/GjpMBK3kA6"
+            href="https://discord.gg/steampromo"
             target="_blank"
             rel="noopener noreferrer"
             className={`${styles.socialBtn} ${styles.socialBtnDiscord}`}
-            aria-label="Discord (abre em nova aba)"
           >
-            💬 Discord
             <span className={styles.tooltip}>Entre no servidor do Discord!</span>
+            <span className={styles.socialBtnIcon}>💬</span>
+            Discord
+            <span className={styles.socialBtnLabel}>Servidor da comunidade</span>
           </a>
         </div>
 
-        <footer className={styles.footer}>🎮 STEAM PROMO v2.0 🛡️</footer>
+        <p className={styles.footer}>🎮 STEAM PROMO v2.0 🛡️</p>
       </div>
     </div>
   );
