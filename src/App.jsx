@@ -1,25 +1,39 @@
 import { useState } from "react";
 import styles from "./App.module.css";
 
+const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
+
 export default function App() {
   const [url, setUrl] = useState("");
   const [game, setGame] = useState(null);
   const [mensagem, setMensagem] = useState("");
-  const [statusMsg, setStatusMsg] = useState("neutro");
+  const [tipoMsg, setTipoMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
+  function limparTela() {
+    setGame(null);
+    setUrl("");
+  }
+
+  function mostrarMensagem(texto, tipo, autoClear = false) {
+    setMensagem(texto);
+    setTipoMsg(tipo);
+
+    if (autoClear) {
+      setTimeout(() => {
+        setMensagem("");
+      }, 2500);
+    }
+  }
 
   async function buscar() {
     if (!url.match(steamRegex)) {
-      setMensagem("⚠️ URL inválida! Insira uma URL válida da Steam.");
-      setStatusMsg("erro");
+      mostrarMensagem("⚠️ URL inválida! Insira uma URL válida da Steam.", "erro");
       return;
     }
 
     setLoading(true);
-    setMensagem("⏳ Buscando dados...");
-    setStatusMsg("aviso");
+    mostrarMensagem("⏳ Buscando dados...", "aviso");
 
     try {
       const res = await fetch("/api/google", {
@@ -29,25 +43,22 @@ export default function App() {
         },
         body: JSON.stringify({
           acao: "buscar",
-          url: url
+          url
         })
       });
 
       const data = await res.json();
 
       if (data.status !== "ok") {
-        setMensagem("❌ " + data.mensagem);
-        setStatusMsg("erro");
+        mostrarMensagem("❌ " + data.mensagem, "erro");
         setLoading(false);
         return;
       }
 
       setGame(data);
-      setMensagem("✅ Game encontrado!");
-      setStatusMsg("ok");
-    } catch (err) {
-      setMensagem("Erro ao conectar com servidor.");
-      setStatusMsg("erro");
+      mostrarMensagem("✅ Game encontrado!", "ok", true);
+    } catch (e) {
+      mostrarMensagem("Erro ao conectar com servidor.", "erro");
     }
 
     setLoading(false);
@@ -56,8 +67,8 @@ export default function App() {
   async function enviar() {
     if (!game) return;
 
-    setMensagem("⏳ Enviando sugestão...");
-    setStatusMsg("aviso");
+    setLoading(true);
+    mostrarMensagem("⏳ Enviando sugestão...", "aviso");
 
     try {
       const res = await fetch("/api/google", {
@@ -68,7 +79,7 @@ export default function App() {
         body: JSON.stringify({
           acao: "salvar",
           nome: game.nome,
-          url: url,
+          url,
           id: game.id,
           tipo: game.tipo
         })
@@ -76,28 +87,29 @@ export default function App() {
 
       const data = await res.json();
 
-      setMensagem(data.mensagem);
-
       if (data.status === "ok") {
-        setStatusMsg("ok");
-        setGame(null);
-        setUrl("");
+        mostrarMensagem(data.mensagem, "ok");
+        limparTela();
+      } else if (data.status === "existe") {
+        mostrarMensagem(data.mensagem, "aviso");
       } else {
-        setStatusMsg("aviso");
+        mostrarMensagem(data.mensagem, "erro");
       }
-    } catch (err) {
-      setMensagem("Erro ao enviar sugestão.");
-      setStatusMsg("erro");
+    } catch (e) {
+      mostrarMensagem("Erro ao enviar sugestão.", "erro");
     }
+
+    setLoading(false);
   }
 
   return (
-    <div className={styles.body}>
+    <div className={styles.wrapper}>
       <div className={styles.card}>
         <h1>⚔️ STEAM PROMO ⚔️</h1>
         <p className={styles.subtitle}>Rastreador de Preços</p>
 
         <label className={styles.label}>🎮 URL DA STEAM:</label>
+
         <input
           type="text"
           placeholder="Cole a URL da Steam aqui..."
@@ -105,8 +117,8 @@ export default function App() {
           onChange={(e) => setUrl(e.target.value)}
         />
 
-        <button onClick={buscar}>
-          {loading ? "Buscando..." : "Buscar Game"}
+        <button onClick={buscar} disabled={loading}>
+          {loading ? "Processando..." : "Buscar Game"}
         </button>
 
         {game && (
@@ -122,6 +134,7 @@ export default function App() {
             <button
               className={styles.btnEnviar}
               onClick={enviar}
+              disabled={loading}
             >
               Enviar Sugestão
             </button>
@@ -129,13 +142,13 @@ export default function App() {
         )}
 
         {mensagem && (
-          <div className={`${styles.msg} ${styles[statusMsg]}`}>
+          <div className={`${styles.msg} ${styles[tipoMsg]}`}>
             {mensagem}
           </div>
         )}
 
         <div className={styles.footer}>
-          🎮 STEAM PROMO v3.0 🚀
+          🎮 STEAM PROMO v3.5 🛡️
         </div>
       </div>
     </div>
