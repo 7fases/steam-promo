@@ -4,7 +4,6 @@ import telegramIcon from './assets/telegram.svg';
 import discordIcon from './assets/discord.svg';
 import errorMp3 from './assets/error.mp3';
 import entrouMp3 from './assets/entrou.mp3';
-
 // Particles canvas
 function Particles() {
   const canvasRef = useRef(null);
@@ -64,7 +63,6 @@ function Particles() {
   }, []);
   return <canvas ref={canvasRef} className={styles['sp-canvas']} />;
 }
-
 function cleanGameName(name) {
   // Remove padrões como "Save X% on "
   name = name.replace(/^Save \d+% on /i, '');
@@ -76,10 +74,8 @@ function cleanGameName(name) {
   name = name.replace(/Base Game/g, 'Game');
   return name.trim();
 }
-
 function MessageBubble({ mensagem, onExiting }) {
   const [isExiting, setIsExiting] = useState(false);
-
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsExiting(true);
@@ -87,10 +83,8 @@ function MessageBubble({ mensagem, onExiting }) {
         onExiting();
       }, 300);
     }, 14000);
-
     return () => clearTimeout(timer);
   }, [onExiting]);
-
   return (
     <div className={`${styles['sp-msg-bubble']} ${styles[`sp-bubble-${mensagem.tipo}`]} ${isExiting ? styles['sp-bubble-exit'] : ''}`}>
       <div className={styles['sp-bubble-inner']}>
@@ -106,7 +100,6 @@ function MessageBubble({ mensagem, onExiting }) {
     </div>
   );
 }
-
 function App() {
   const [url, setUrl] = useState('');
   const [gameAtual, setGameAtual] = useState(null);
@@ -243,29 +236,39 @@ function App() {
           <span className={styles['sp-line']} />
           <span className={styles['sp-dot']} />
         </div>
-        {/* Form */}
-        <div className={styles['sp-form']}>
-          <label className={styles['sp-label']} htmlFor="steamUrl">🎮 URL DA STEAM:</label>
-          <div className={styles['sp-input-group']}>
-            <input
-              id="steamUrl"
-              className={styles['sp-input']}
-              type="url"
-              placeholder="https://store.steampowered.com/app/..."
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !loading && handleVibrateClick(buscar)}
-              disabled={loading}
+        {/* Form wrapper */}
+        <div className={styles['sp-form-wrapper']}>
+          {/* Message */}
+          {mensagem.texto && (
+            <MessageBubble
+              mensagem={mensagem}
+              onExiting={() => setMensagem({ texto: '', tipo: '' })}
             />
-            <button 
-              className={`${styles['sp-btn']} ${styles['sp-btn-yellow']} ${styles['sp-btn-square']}`} 
-              onClick={() => handleVibrateClick(buscar)} 
-              disabled={loading}
-            >
-              {loading ? (
-                <span className={styles['sp-dots']}><span>.</span><span>.</span><span>.</span></span>
-              ) : '🔍'}
-            </button>
+          )}
+          {/* Form */}
+          <div className={styles['sp-form']}>
+            <label className={styles['sp-label']} htmlFor="steamUrl">🎮 URL DA STEAM:</label>
+            <div className={styles['sp-input-group']}>
+              <input
+                id="steamUrl"
+                className={styles['sp-input']}
+                type="url"
+                placeholder="https://store.steampowered.com/app/..."
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !loading && handleVibrateClick(buscar)}
+                disabled={loading}
+              />
+              <button
+                className={`${styles['sp-btn']} ${styles['sp-btn-yellow']} ${styles['sp-btn-square']}`}
+                onClick={() => handleVibrateClick(buscar)}
+                disabled={loading}
+              >
+                {loading ? (
+                  <span className={styles['sp-dots']}><span>.</span><span>.</span><span>.</span></span>
+                ) : '🔍'}
+              </button>
+            </div>
           </div>
         </div>
         {/* Game result */}
@@ -279,22 +282,15 @@ function App() {
           </div>
         )}
         {gameAtual && !enviarBloqueado && (
-          <button 
-            className={`${styles['sp-btn']} ${styles['sp-btn-green']}`} 
-            onClick={() => handleVibrateClick(enviar)} 
+          <button
+            className={`${styles['sp-btn']} ${styles['sp-btn-green']}`}
+            onClick={() => handleVibrateClick(enviar)}
             disabled={loading}
           >
             {loading ? (
               <span className={styles['sp-dots']}>ENVIANDO<span>.</span><span>.</span><span>.</span></span>
             ) : '⭐ ENVIAR SUGESTÃO'}
           </button>
-        )}
-        {/* Message */}
-        {mensagem.texto && (
-          <MessageBubble
-            mensagem={mensagem}
-            onExiting={() => setMensagem({ texto: '', tipo: '' })}
-          />
         )}
         {/* Footer */}
         <footer className={styles['sp-footer']}>
