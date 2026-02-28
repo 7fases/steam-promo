@@ -1,0 +1,110 @@
+.body {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0a1a, #1a0a2e);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: monospace;
+  padding: 20px;
+}
+
+.card {
+  background: #0a1128;
+  padding: 30px;
+  width: 100%;
+  max-width: 500px;
+  border: 3px solid #4488ff;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(68, 136, 255, 0.2);
+}
+
+h1 {
+  color: #ffcc00;
+  margin-bottom: 5px;
+}
+
+.subtitle {
+  font-size: 12px;
+  color: #6688bb;
+  margin-bottom: 20px;
+}
+
+.label {
+  display: block;
+  text-align: left;
+  font-size: 12px;
+  margin-bottom: 5px;
+  color: #88aadd;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  background: #0a0e1a;
+  border: 2px solid #2a3a5c;
+  color: white;
+  margin-bottom: 10px;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  background: #ffcc00;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+button:hover {
+  background: #ffe066;
+}
+
+.btnEnviar {
+  background: #44cc44;
+}
+
+.btnEnviar:hover {
+  background: #55dd55;
+}
+
+.imgFrame {
+  margin-top: 15px;
+}
+
+.imgFrame img {
+  width: 100%;
+}
+
+.nomeGame {
+  margin-top: 10px;
+  color: #ffcc00;
+  font-weight: bold;
+}
+
+.msg {
+  margin-top: 15px;
+  padding: 10px;
+  border: 2px solid;
+}
+
+.ok {
+  border-color: #44ff44;
+  color: #44ff44;
+}
+
+.erro {
+  border-color: #ff4444;
+  color: #ff4444;
+}
+
+.aviso {
+  border-color: #ffcc00;
+  color: #ffcc00;
+}
+
+.footer {
+  margin-top: 20px;
+  font-size: 12px;
+  color: #6688bb;
+}
