@@ -81,9 +81,13 @@ function App() {
   const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
   const mostrarMensagem = (texto, tipo = 'info') => {
     setMensagem({ texto, tipo });
-    if (tipo !== 'erro') {
-      setTimeout(() => setMensagem({ texto: '', tipo: '' }), 4000);
+    // Play sound based on type
+    if (tipo === 'erro') {
+      new Audio('/error.mp3').play();
+    } else if (tipo === 'sucesso') {
+      new Audio('/entrou.mp3').play();
     }
+    setTimeout(() => setMensagem({ texto: '', tipo: '' }), tipo === 'erro' ? 8000 : 4000);
   };
   const buscar = async () => {
     if (!url.match(steamRegex)) {
@@ -130,6 +134,7 @@ function App() {
       const res = await response.json();
       if (res.status === 'ok') {
         mostrarMensagem(res.mensagem, 'sucesso');
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
         setGameAtual(null);
         setUrl('');
         setEnviarBloqueado(false);
@@ -145,6 +150,10 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+  const handleVibrateClick = (action) => {
+    if (navigator.vibrate) navigator.vibrate(50);
+    action();
   };
   return (
     <div className={styles['sp-wrap']}>
@@ -182,11 +191,11 @@ function App() {
           <p className={styles['sp-social-label']}>Acompanhe as promos pelo Discord e Telegram</p>
           <div className={styles['sp-social-btns']}>
             <a href="https://t.me/steampromocao" target="_blank" rel="noopener noreferrer" className={`${styles['sp-sbtn']} ${styles['sp-tg']}`}>
-              <img src="/public/telegram.svg" alt="Telegram" width="20" height="20" />
+              <img src="/telegram.svg" alt="Telegram" width="20" height="20" />
               <span>Telegram</span>
             </a>
             <a href="https://discord.com/invite/GjpMBK3kA6" target="_blank" rel="noopener noreferrer" className={`${styles['sp-sbtn']} ${styles['sp-dc']}`}>
-              <img src="/public/discord.svg" alt="Discord" width="20" height="20" />
+              <img src="/discord.svg" alt="Discord" width="20" height="20" />
               <span>Discord</span>
             </a>
           </div>
@@ -200,21 +209,27 @@ function App() {
         {/* Form */}
         <div className={styles['sp-form']}>
           <label className={styles['sp-label']} htmlFor="steamUrl">🎮 URL DA STEAM:</label>
-          <input
-            id="steamUrl"
-            className={styles['sp-input']}
-            type="url"
-            placeholder="https://store.steampowered.com/app/..."
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !loading && buscar()}
-            disabled={loading}
-          />
-          <button className={`${styles['sp-btn']} ${styles['sp-btn-yellow']}`} onClick={buscar} disabled={loading}>
-            {loading ? (
-              <span className={styles['sp-dots']}>BUSCANDO<span>.</span><span>.</span><span>.</span></span>
-            ) : '🔍 BUSCAR GAME'}
-          </button>
+          <div className={styles['sp-input-group']}>
+            <input
+              id="steamUrl"
+              className={styles['sp-input']}
+              type="url"
+              placeholder="https://store.steampowered.com/app/..."
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !loading && handleVibrateClick(buscar)}
+              disabled={loading}
+            />
+            <button 
+              className={`${styles['sp-btn']} ${styles['sp-btn-yellow']} ${styles['sp-btn-square']}`} 
+              onClick={() => handleVibrateClick(buscar)} 
+              disabled={loading}
+            >
+              {loading ? (
+                <span className={styles['sp-dots']}><span>.</span><span>.</span><span>.</span></span>
+              ) : '🔍'}
+            </button>
+          </div>
         </div>
         {/* Game result */}
         {gameAtual?.imagem && (
@@ -223,11 +238,15 @@ function App() {
               <img src={gameAtual.imagem} alt={gameAtual.nome} />
               <div className={styles['sp-img-overlay']} />
             </div>
-            <p className={styles['sp-game-name']}>🏰 {gameAtual.nome}</p>
+            <p className={styles['sp-game-name']}>🎮 {gameAtual.nome}</p>
           </div>
         )}
         {gameAtual && !enviarBloqueado && (
-          <button className={`${styles['sp-btn']} ${styles['sp-btn-green']}`} onClick={enviar} disabled={loading}>
+          <button 
+            className={`${styles['sp-btn']} ${styles['sp-btn-green']}`} 
+            onClick={() => handleVibrateClick(enviar)} 
+            disabled={loading}
+          >
             {loading ? (
               <span className={styles['sp-dots']}>ENVIANDO<span>.</span><span>.</span><span>.</span></span>
             ) : '⭐ ENVIAR SUGESTÃO'}
