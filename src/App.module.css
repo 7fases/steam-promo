@@ -488,6 +488,32 @@
   .sp-card { max-width: 680px; padding: 44px 40px 36px; }
   .sp-img-frame img { max-height: 300px; }
   .sp-avatar { width: 68px; height: 68px; top: -34px; }
+  .sp-footer {
+    position: absolute;
+    left: -80px;
+    top: 50%;
+    transform: translateY(-50%) rotate(-90deg);
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .sp-pixels {
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 0;
+    margin-right: 10px;
+  }
+  @keyframes sp-pixel-dance {
+    0%,100% { transform: translateX(0); opacity:0.6; }
+    50%      { transform: translateX(8px); opacity:1; }
+  }
+  .sp-footer-text {
+    white-space: nowrap;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

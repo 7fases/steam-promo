@@ -87,7 +87,7 @@ function App() {
     } else if (playSound && tipo === 'sucesso') {
       new Audio('/public/entrou.mp3').play();
     }
-    setTimeout(() => setMensagem({ texto: '', tipo: '' }), (tipo === 'erro' || tipo === 'aviso') ? 8000 : 4000);
+    setTimeout(() => setMensagem({ texto: '', tipo: '' }), 15000);
   };
   const buscar = async () => {
     if (!url.match(steamRegex)) {
