@@ -60,6 +60,17 @@ function Particles() {
   }, []);
   return <canvas ref={canvasRef} className={styles['sp-canvas']} />;
 }
+
+function cleanGameName(name) {
+  // Remove padrões como "Save X% on "
+  name = name.replace(/^Save \d+% on /i, '');
+  // Remover emojis ou símbolos indesejados (ex: se começar com emoji, remover)
+  name = name.replace(/^[^a-zA-Z0-9]+/, '');
+  // Remover "Base " se seguido de "Game", mas manter versão/DLC
+  name = name.replace(/Base Game/g, 'Game');
+  return name.trim();
+}
+
 function App() {
   const [url, setUrl] = useState('');
   const [gameAtual, setGameAtual] = useState(null);
@@ -91,6 +102,7 @@ function App() {
       });
       const res = await response.json();
       if (!response.ok || res.status !== 'ok') throw new Error(res.mensagem || 'Erro ao buscar jogo');
+      res.nome = cleanGameName(res.nome);
       setGameAtual(res);
       mostrarMensagem('✅ Jogo encontrado!', 'sucesso');
     } catch (error) {
@@ -138,20 +150,14 @@ function App() {
     <div className={styles['sp-wrap']}>
       <Particles />
       <div className={styles['sp-scanlines']} />
-      {/* Profile avatar */}
-      <a
-        href="https://github.com/7fases"
-        target="_blank"
-        rel="noopener noreferrer"
-        className={styles['sp-avatar']}
-        title="Criado por 7Fases"
-      >
-        <img
-          src="https://7fases.github.io/youtube/imagens/Logo%20versao%202.0.webp"
-          alt="7Fases"
-        />
-      </a>
       <div className={styles['sp-card']}>
+        {/* Profile avatar - agora dentro do card */}
+        <div className={styles['sp-avatar']}>
+          <img
+            src="https://7fases.github.io/youtube/imagens/Logo%20versao%202.0.webp"
+            alt="7Fases"
+          />
+        </div>
         <span className={`${styles['sp-corner']} ${styles['sp-tl']}`} />
         <span className={`${styles['sp-corner']} ${styles['sp-tr']}`} />
         <span className={`${styles['sp-corner']} ${styles['sp-bl']}`} />
@@ -176,11 +182,11 @@ function App() {
           <p className={styles['sp-social-label']}>Acompanhe as promos pelo Discord e Telegram</p>
           <div className={styles['sp-social-btns']}>
             <a href="https://t.me/steampromocao" target="_blank" rel="noopener noreferrer" className={`${styles['sp-sbtn']} ${styles['sp-tg']}`}>
-              <img src="/telegram.svg" alt="Telegram" width="20" height="20" />
+              <img src="/public/telegram.svg" alt="Telegram" width="20" height="20" />
               <span>Telegram</span>
             </a>
             <a href="https://discord.com/invite/GjpMBK3kA6" target="_blank" rel="noopener noreferrer" className={`${styles['sp-sbtn']} ${styles['sp-dc']}`}>
-              <img src="/discord.svg" alt="Discord" width="20" height="20" />
+              <img src="/public/discord.svg" alt="Discord" width="20" height="20" />
               <span>Discord</span>
             </a>
           </div>
