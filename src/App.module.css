@@ -1,4 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+
+@font-face {
+  font-family: 'PixelFont';
+  src: url('./assets/pixelfont.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 :root {
   --sp-bg: #04060f;
   --sp-card: #080c18;
@@ -256,7 +264,7 @@
   box-shadow: 0 0 20px rgba(88,101,242,0.6), var(--sp-shadow);
 }
 /* Form */
-.sp-form { display: flex; flex-direction: column; }
+.sp-form { display: flex; flex-direction: column; gap: 10px; }
 .sp-input-group {
   display: flex;
   gap: 8px;
@@ -513,7 +521,7 @@
 .sp-bc:nth-child(4) { bottom: 0; right: 0; }
 .sp-bubble-text {
   margin: 0;
-  font-family: var(--sp-font-title);
+  font-family: 'PixelFont', monospace;
   font-size: clamp(0.5rem, 2vw, 0.7rem);
   letter-spacing: 1px;
   line-height: 1.6;
