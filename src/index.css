@@ -7,17 +7,31 @@
 }
 
 html, body, #root {
-  height: 100%;
   width: 100%;
+  max-width: 100vw;
   overflow-x: hidden;
+}
+
+html {
+  height: 100vh;
+  height: 100dvh; /* Para mobile com barra de endereço dinâmica */
 }
 
 body {
   font-family: 'VT323', 'Courier New', monospace;
-  background: #0b0e1a; /* fallback */
+  background: #0b0e1a;
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* Remove estilos padrão de botão que conflitam */

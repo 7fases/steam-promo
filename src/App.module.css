@@ -56,7 +56,7 @@ input, textarea {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  padding: 35px 12px 48px;
+  padding: 16px 12px 20px; /* Reduzido para mobile */
   box-sizing: border-box;
   position: relative;
   overflow-y: auto;
@@ -905,7 +905,7 @@ input, textarea {
 }
 /* Responsive */
 @media (min-width: 480px) {
-  .sp-wrap { padding: 72px 16px 56px; }
+  .sp-wrap { padding: 40px 16px 48px; }
   .sp-card { padding: 36px 32px 28px; }
   .sp-avatar { width: 62px; height: 62px; top: -47px; }
 }
@@ -917,8 +917,8 @@ input, textarea {
   }
   .sp-img-frame img { max-height: 300px; }
   .sp-avatar { width: 98px; height: 98px; top: -72px; }
- 
-  /* Modal desktop - EXATAMENTE 95% da largura do card e altura fixa */
+  
+  /* Modal desktop */
   .sp-modal {
     max-width: 646px;
     height: 65vh;
@@ -935,16 +935,16 @@ input, textarea {
     justify-content: center;
     align-items: center;
   }
- 
+  
   .sp-footer .sp-pixels {
     display: none;
   }
- 
+  
   @keyframes sp-pixel-dance {
     0%,100% { transform: translateX(0); opacity:0.6; }
     50% { transform: translateX(-4px); opacity:1; }
   }
- 
+  
   .sp-footer {
     position: absolute;
     left: -85px;
@@ -959,7 +959,7 @@ input, textarea {
     gap: 5px;
     flex-direction: row;
   }
- 
+  
   .sp-footer-text {
     white-space: nowrap;
   }
