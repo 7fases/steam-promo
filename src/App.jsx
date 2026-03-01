@@ -112,9 +112,6 @@ function App() {
   const [modalLoading, setModalLoading] = useState(false);
   const modalRef = useRef(null);
   
-  // URL da sua API do Google Apps Script (substitua pela sua URL)
-  const GAS_API_URL = 'https://script.google.com/macros/d/YOUR_DEPLOYMENT_ID/usercache';
-  
   const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
 
   const mostrarMensagem = (texto, tipo = 'info', playSound = false) => {
@@ -192,27 +189,32 @@ function App() {
   const fetchGames = async () => {
     setModalLoading(true);
     try {
-      const response = await fetch(GAS_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ acao: 'listar' }),
-      });
+      // Busca do arquivo games.json diretamente do GitHub (raw content)
+      const response = await fetch(
+        'https://raw.githubusercontent.com/7fases/steam-promo/main/games.json',
+        {
+          headers: {
+            'Accept': 'application/json',
+          },
+        }
+      );
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP ${response.status}: Arquivo não encontrado`);
       }
       
-      const res = await response.json();
+      const games = await response.json();
       
-      if (res.status === 'ok' && res.games) {
-        setGames(res.games);
-      } else {
-        throw new Error(res.mensagem || 'Erro ao carregar lista');
+      // Validar se é um array
+      if (!Array.isArray(games)) {
+        throw new Error('Formato de dados inválido');
       }
+      
+      setGames(games);
     } catch (error) {
       console.error('Erro ao carregar games:', error);
-      mostrarMensagem(`❌ ${error.message}`, 'erro');
-      setGames([]); // Define como array vazio para evitar erros
+      // Não mostrar erro ao usuário, apenas deixar a lista vazia
+      setGames([]);
     } finally {
       setModalLoading(false);
     }
