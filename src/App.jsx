@@ -176,26 +176,24 @@ function App() {
       setLoading(false);
     }
   };
-  const fetchGames = async () => {
-    setModalLoading(true);
-    try {
-      const response = await fetch('https://steam-promo.vercel.app/api/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ acao: 'listar' }),
-      });
-      const res = await response.json();
-      if (res.status === 'ok') {
-        setGames(res.games);
-      } else {
-        throw new Error(res.mensagem || 'Erro ao carregar lista');
-      }
-    } catch (error) {
-      mostrarMensagem(`❌ ${error.message}`, 'erro');
-    } finally {
-      setModalLoading(false);
-    }
-  };
+
+  
+const fetchGames = async () => {
+  setModalLoading(true);
+  try {
+    const response = await fetch('games.json');
+    if (!response.ok) throw new Error('Erro ao carregar lista');
+    const games = await response.json();
+    setGames(games);
+  } catch (error) {
+    mostrarMensagem(`❌ ${error.message}`, 'erro');
+  } finally {
+    setModalLoading(false);
+  }
+};
+
+
+
   const openModal = async () => {
     if (games.length === 0) {
       await fetchGames();
