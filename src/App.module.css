@@ -26,8 +26,8 @@
   --sp-font-body: 'VT323', 'Courier New', monospace;
 
   /* ==================== CONTROLE DE TRANSPARÊNCIA AQUI ==================== */
-  --sp-bubble-alpha-start: 0.52; /* Mude esse valor para ajustar o início do gradiente (mais alto = mais opaco) */
-  --sp-bubble-alpha-end: 0.48;   /* Mude esse valor para ajustar o fim do gradiente (mais alto = mais opaco) */
+  --sp-bubble-alpha-start: 0.88; /* Aumentado para maior opacidade inicial */
+  --sp-bubble-alpha-end: 0.78;   /* Aumentado para maior opacidade final, melhor legibilidade */
 }
 .sp-wrap {
   min-height: 100vh;
@@ -44,7 +44,8 @@
   padding: 72px 12px 48px;
   box-sizing: border-box;
   position: relative;
-  overflow-x: hidden;
+  overflow: hidden; /* Alterado para hidden para prevenir scroll/drag */
+  touch-action: none; /* Previne drag em touch devices */
 }
 .sp-canvas {
   position: fixed;
@@ -281,6 +282,10 @@
   color: var(--sp-dim);
   margin-bottom: 10px;
   letter-spacing: 1px;
+  transition: opacity 0.3s ease-in-out; /* Transição suave para fade-in */
+}
+.sp-label-hidden {
+  opacity: 0; /* Oculta o label quando mensagem está presente */
 }
 .sp-input {
   flex: 1;
@@ -528,24 +533,25 @@
 .sp-bubble-text {
   margin: 0;
   font-family: 'PixelFont', monospace;
-  font-size: clamp(0.5rem, 2vw, 0.7rem);
-  letter-spacing: 1px;
-  line-height: 1.8;
+  font-size: clamp(0.8rem, 3vw, 1.1rem); /* Aumentado para melhor legibilidade */
+  letter-spacing: 0.5px; /* Espaçamento ajustado para menos denso */
+  line-height: 1.5; /* Linha mais espaçada para facilitar leitura */
   word-break: break-word;
   text-transform: uppercase;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.8); /* Sombra para melhorar legibilidade em backgrounds opacos */
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.9); /* Sombra mais forte para contraste */
+  font-weight: bold; /* Negrito para pixel font se encaixar melhor no estilo 8-bit/manga */
 }
 .sp-bubble-info .sp-bubble-text {
-  color: #e8dfc8;
+  color: #ffffff; /* Mudado para branco puro para maior contraste */
 }
 .sp-bubble-sucesso .sp-bubble-text {
-  color: #e8dfc8;
+  color: #ffffff;
 }
 .sp-bubble-erro .sp-bubble-text {
-  color: #e8dfc8;
+  color: #ffffff;
 }
 .sp-bubble-aviso .sp-bubble-text {
-  color: #e8dfc8;
+  color: #ffffff;
 }
 .sp-bubble-pointer {
   position: absolute;

@@ -4,6 +4,7 @@ import telegramIcon from './assets/telegram.svg';
 import discordIcon from './assets/discord.svg';
 import errorMp3 from './assets/error.mp3';
 import entrouMp3 from './assets/entrou.mp3';
+
 // Particles canvas
 function Particles() {
   const canvasRef = useRef(null);
@@ -63,6 +64,7 @@ function Particles() {
   }, []);
   return <canvas ref={canvasRef} className={styles['sp-canvas']} />;
 }
+
 function cleanGameName(name) {
   // Remove padrões como "Save X% on "
   name = name.replace(/^Save \d+% on /i, '');
@@ -74,6 +76,7 @@ function cleanGameName(name) {
   name = name.replace(/Base Game/g, 'Game');
   return name.trim();
 }
+
 function MessageBubble({ mensagem, onExiting }) {
   const [isExiting, setIsExiting] = useState(false);
   useEffect(() => {
@@ -100,6 +103,7 @@ function MessageBubble({ mensagem, onExiting }) {
     </div>
   );
 }
+
 function App() {
   const [url, setUrl] = useState('');
   const [gameAtual, setGameAtual] = useState(null);
@@ -108,6 +112,7 @@ function App() {
   // UX: hide enviar button when game already exists or on error until new search
   const [enviarBloqueado, setEnviarBloqueado] = useState(false);
   const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
+
   const mostrarMensagem = (texto, tipo = 'info', playSound = false) => {
     setMensagem({ texto, tipo });
     // Play sound based on type
@@ -117,6 +122,7 @@ function App() {
       new Audio(entrouMp3).play();
     }
   };
+
   const buscar = async () => {
     if (!url.match(steamRegex)) {
       mostrarMensagem('⚠️ URL inválida! Insira uma URL da Steam.', 'erro');
@@ -145,6 +151,7 @@ function App() {
       setLoading(false);
     }
   };
+
   const enviar = async () => {
     if (!gameAtual) return;
     mostrarMensagem('⏳ Enviando sugestão...', 'info');
@@ -181,10 +188,12 @@ function App() {
       setLoading(false);
     }
   };
+
   const handleVibrateClick = (action) => {
     if (navigator.vibrate) navigator.vibrate(50);
     action();
   };
+
   return (
     <div className={styles['sp-wrap']}>
       <Particles />
@@ -247,7 +256,7 @@ function App() {
           )}
           {/* Form */}
           <div className={styles['sp-form']}>
-            <label className={styles['sp-label']} htmlFor="steamUrl">🎮 URL DA STEAM:</label>
+            <label className={`${styles['sp-label']} ${mensagem.texto ? styles['sp-label-hidden'] : ''}`} htmlFor="steamUrl">🎮 URL DA STEAM:</label>
             <div className={styles['sp-input-group']}>
               <input
                 id="steamUrl"
@@ -307,4 +316,5 @@ function App() {
     </div>
   );
 }
+
 export default App;
