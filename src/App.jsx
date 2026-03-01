@@ -1,10 +1,10 @@
+// App.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './App.module.css';
 import telegramIcon from './assets/telegram.svg';
 import discordIcon from './assets/discord.svg';
 import errorMp3 from './assets/error.mp3';
 import entrouMp3 from './assets/entrou.mp3';
-
 // Particles canvas
 function Particles() {
   const canvasRef = useRef(null);
@@ -64,7 +64,6 @@ function Particles() {
   }, []);
   return <canvas ref={canvasRef} className={styles['sp-canvas']} />;
 }
-
 function cleanGameName(name) {
   name = name.replace(/^Save \d+% on /i, '');
   name = name.replace(/^[^a-zA-Z0-9]+/, '');
@@ -72,7 +71,6 @@ function cleanGameName(name) {
   name = name.replace(/Base Game/g, 'Game');
   return name.trim();
 }
-
 function MessageBubble({ mensagem, onExiting }) {
   const [isExiting, setIsExiting] = useState(false);
   useEffect(() => {
@@ -99,7 +97,6 @@ function MessageBubble({ mensagem, onExiting }) {
     </div>
   );
 }
-
 function App() {
   const [url, setUrl] = useState('');
   const [gameAtual, setGameAtual] = useState(null);
@@ -111,15 +108,13 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [modalLoading, setModalLoading] = useState(false);
   const modalRef = useRef(null);
-  
+ 
   const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
-
   const mostrarMensagem = (texto, tipo = 'info', playSound = false) => {
     setMensagem({ texto, tipo });
     if (tipo === 'erro') new Audio(errorMp3).play();
     else if (playSound && tipo === 'sucesso') new Audio(entrouMp3).play();
   };
-
   const buscar = async () => {
     if (!url.match(steamRegex)) {
       mostrarMensagem('⚠️ URL inválida! Insira uma URL da Steam.', 'erro');
@@ -148,7 +143,6 @@ function App() {
       setLoading(false);
     }
   };
-
   const enviar = async () => {
     if (!gameAtual) return;
     mostrarMensagem('⏳ Enviando sugestão...', 'info');
@@ -185,7 +179,6 @@ function App() {
       setLoading(false);
     }
   };
-
   const fetchGames = async () => {
     setModalLoading(true);
     try {
@@ -198,18 +191,18 @@ function App() {
           },
         }
       );
-      
+     
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: Arquivo não encontrado`);
       }
-      
+     
       const games = await response.json();
-      
+     
       // Validar se é um array
       if (!Array.isArray(games)) {
         throw new Error('Formato de dados inválido');
       }
-      
+     
       setGames(games);
     } catch (error) {
       console.error('Erro ao carregar games:', error);
@@ -219,7 +212,6 @@ function App() {
       setModalLoading(false);
     }
   };
-
   const openModal = async () => {
     if (games.length === 0) {
       await fetchGames();
@@ -227,26 +219,21 @@ function App() {
     setIsModalOpen(true);
     setSearchTerm('');
   };
-
   const closeModal = () => {
     setIsModalOpen(false);
   };
-
   const handleModalOverlayClick = (e) => {
     if (e.target === e.currentTarget) {
       closeModal();
     }
   };
-
   const filteredGames = games.filter(game =>
     game.nome && game.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
   const handleVibrateClick = (action) => {
     if (navigator.vibrate) navigator.vibrate(50);
     action();
   };
-
   return (
     <div className={styles['sp-wrap']}>
       <Particles />
@@ -341,13 +328,12 @@ function App() {
             {loading ? <span className={styles['sp-dots']}>ENVIANDO<span>.</span><span>.</span><span>.</span></span> : '⭐ ENVIAR SUGESTÃO'}
           </button>
         )}
-
         <footer className={styles['sp-footer']}>
           <div className={styles['sp-pixels']}>
             {[...Array(8)].map((_, i) => <span key={i} className={styles['sp-px']} />)}
           </div>
           <p className={styles['sp-footer-text']}>🎮 STEAM PROMO 2.0 🛡</p>
-          
+         
           <button
             className={styles['sp-btn-float-games-mobile']}
             onClick={() => handleVibrateClick(openModal)}
@@ -355,11 +341,10 @@ function App() {
             Games Cadastrados
           </button>
         </footer>
-        
+       
         <div className={styles['sp-pixels-desktop']}>
           {[...Array(8)].map((_, i) => <span key={i} className={styles['sp-px']} />)}
         </div>
-
         <button
           className={styles['sp-btn-float-games-desktop']}
           onClick={() => handleVibrateClick(openModal)}
@@ -367,7 +352,6 @@ function App() {
           Games Cadastrados
         </button>
       </div>
-
       {isModalOpen && (
         <div className={styles['sp-modal-overlay']} onClick={handleModalOverlayClick}>
           <div className={styles['sp-modal']} ref={modalRef} onClick={(e) => e.stopPropagation()}>
@@ -375,7 +359,7 @@ function App() {
             <span className={`${styles['sp-modal-corner']} ${styles['sp-modal-tr']}`} />
             <span className={`${styles['sp-modal-corner']} ${styles['sp-modal-bl']}`} />
             <span className={`${styles['sp-modal-corner']} ${styles['sp-modal-br']}`} />
-            
+           
             <button className={styles['sp-modal-close']} onClick={closeModal}>✕</button>
             <h2 className={styles['sp-modal-title']}>Games Cadastrados</h2>
             <input
@@ -394,6 +378,7 @@ function App() {
                     filteredGames.map((game, index) => (
                       <li key={index}>
                         <a href={game.url} target="_blank" rel="noopener noreferrer">
+                          <img src={game.imagem} alt={game.nome} className={styles['sp-game-img']} />
                           {game.nome}
                         </a>
                       </li>
@@ -410,5 +395,4 @@ function App() {
     </div>
   );
 }
-
 export default App;
