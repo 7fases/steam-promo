@@ -112,6 +112,7 @@ function App() {
   const [games, setGames] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [modalLoading, setModalLoading] = useState(false);
+  const [hasLoadedGames, setHasLoadedGames] = useState(false);
   const modalRef = useRef(null);
 
   const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
@@ -191,7 +192,6 @@ function App() {
   const fetchGames = async () => {
     setModalLoading(true);
     try {
-      // Usando jsDelivr CDN - funciona com CORS!
       const response = await fetch(
         'https://cdn.jsdelivr.net/gh/7fases/steam-promo@main/games.json',
         {
@@ -211,7 +211,13 @@ function App() {
         throw new Error('Formato de dados inválido');
       }
 
+      // Delay de 1.2s apenas na primeira carregada para ver a animação
+      if (!hasLoadedGames) {
+        await new Promise(resolve => setTimeout(resolve, 600));
+      }
+
       setGames(games);
+      setHasLoadedGames(true);
     } catch (error) {
       console.error('❌ Erro ao carregar games:', error);
       mostrarMensagem(`❌ Erro ao carregar games: ${error.message}`, 'erro');
@@ -222,11 +228,12 @@ function App() {
   };
 
   const openModal = async () => {
+    setIsModalOpen(true);
+    setSearchTerm('');
+    
     if (games.length === 0) {
       await fetchGames();
     }
-    setIsModalOpen(true);
-    setSearchTerm('');
   };
 
   const closeModal = () => {
