@@ -5,6 +5,7 @@ import telegramIcon from './assets/telegram.svg';
 import discordIcon from './assets/discord.svg';
 import errorMp3 from './assets/error.mp3';
 import entrouMp3 from './assets/entrou.mp3';
+import { SkeletonGamesList } from './SkeletonLoader';
 // Particles canvas
 function Particles() {
   const canvasRef = useRef(null);
@@ -179,39 +180,39 @@ function App() {
       setLoading(false);
     }
   };
-  const fetchGames = async () => {
-    setModalLoading(true);
-    try {
-      // Busca do arquivo games.json diretamente do GitHub (raw content)
-      const response = await fetch(
-        'https://raw.githubusercontent.com/7fases/steam-promo/main/games.json',
-        {
-          headers: {
-            'Accept': 'application/json',
-          },
-        }
-      );
-     
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Arquivo não encontrado`);
+ const fetchGames = async () => {
+  setModalLoading(true);
+  try {
+    const response = await fetch(
+      'https://raw.githubusercontent.com/7fases/steam-promo/main/games.json',
+      {
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
+        },
       }
-     
-      const games = await response.json();
-     
-      // Validar se é um array
-      if (!Array.isArray(games)) {
-        throw new Error('Formato de dados inválido');
-      }
-     
-      setGames(games);
-    } catch (error) {
-      console.error('Erro ao carregar games:', error);
-      // Não mostrar erro ao usuário, apenas deixar a lista vazia
-      setGames([]);
-    } finally {
-      setModalLoading(false);
+    );
+   
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: Arquivo não encontrado`);
     }
-  };
+   
+    const text = await response.text();
+    const games = JSON.parse(text);
+   
+    if (!Array.isArray(games)) {
+      throw new Error('Formato de dados inválido');
+    }
+   
+    setGames(games);
+  } catch (error) {
+    console.error('❌ Erro ao carregar games:', error);
+    mostrarMensagem(`Erro ao carregar games: ${error.message}`, 'erro');
+    setGames([]);
+  } finally {
+    setModalLoading(false);
+  }
+};
   const openModal = async () => {
     if (games.length === 0) {
       await fetchGames();
@@ -369,26 +370,26 @@ function App() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <div className={styles['sp-modal-content']}>
-              {modalLoading ? (
-                <p className={styles['sp-modal-loading']}>Carregando...</p>
-              ) : (
-                <ul className={styles['sp-modal-list']}>
-                  {filteredGames.length > 0 ? (
-                    filteredGames.map((game, index) => (
-                      <li key={index}>
-                        <a href={game.url} target="_blank" rel="noopener noreferrer">
-                          <img src={game.imagem} alt={game.nome} className={styles['sp-game-img']} />
-                          {game.nome}
-                        </a>
-                      </li>
-                    ))
-                  ) : (
-                    <li>Nenhum game encontrado.</li>
-                  )}
-                </ul>
-              )}
-            </div>
+<div className={styles['sp-modal-content']}>
+  {modalLoading ? (
+    <SkeletonGamesList />
+  ) : (
+    <ul className={styles['sp-modal-list']}>
+      {filteredGames.length > 0 ? (
+        filteredGames.map((game, index) => (
+          <li key={index}>
+            <a href={game.url} target="_blank" rel="noopener noreferrer">
+              <img src={game.imagem} alt={game.nome} className={styles['sp-game-img']} />
+              {game.nome}
+            </a>
+          </li>
+        ))
+      ) : (
+        <li>Nenhum game encontrado.</li>
+      )}
+    </ul>
+  )}
+</div>
           </div>
         </div>
       )}

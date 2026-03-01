@@ -1,0 +1,79 @@
+/* SkeletonLoader.module.css */
+
+@keyframes sk-shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.sk-games-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 8px;
+}
+
+.sk-game-item {
+  margin-bottom: 12px;
+  animation: sk-fade-in 0.5s ease;
+}
+
+@keyframes sk-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sk-game-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sk-image {
+  width: 92px;
+  height: 43px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    rgba(77, 126, 255, 0.1) 0%,
+    rgba(77, 126, 255, 0.2) 50%,
+    rgba(77, 126, 255, 0.1) 100%
+  );
+  background-size: 1000px 100%;
+  animation: sk-shimmer 2s infinite;
+  flex-shrink: 0;
+}
+
+.sk-text-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sk-text {
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    rgba(77, 126, 255, 0.1) 0%,
+    rgba(77, 126, 255, 0.2) 50%,
+    rgba(77, 126, 255, 0.1) 100%
+  );
+  background-size: 1000px 100%;
+  animation: sk-shimmer 2s infinite;
+}
