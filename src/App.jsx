@@ -183,8 +183,8 @@ function App() {
       <div className={styles['sp-card']}>
         <div className={styles['sp-avatar']}>
           <img
-            src="src\assets\Logo2.1.webp"
-            alt="7Fases"
+            src="public\Logo2.1.webp"
+            
           />
         </div>
         <span className={`${styles['sp-corner']} ${styles['sp-tl']}`} />
