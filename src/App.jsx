@@ -112,6 +112,9 @@ function App() {
   const [modalLoading, setModalLoading] = useState(false);
   const modalRef = useRef(null);
   
+  // URL da sua API do Google Apps Script (substitua pela sua URL)
+  const GAS_API_URL = 'https://script.google.com/macros/d/YOUR_DEPLOYMENT_ID/usercache';
+  
   const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
 
   const mostrarMensagem = (texto, tipo = 'info', playSound = false) => {
@@ -189,12 +192,27 @@ function App() {
   const fetchGames = async () => {
     setModalLoading(true);
     try {
-      const response = await fetch('games.json');
-      if (!response.ok) throw new Error('Erro ao carregar lista');
-      const games = await response.json();
-      setGames(games);
+      const response = await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ acao: 'listar' }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const res = await response.json();
+      
+      if (res.status === 'ok' && res.games) {
+        setGames(res.games);
+      } else {
+        throw new Error(res.mensagem || 'Erro ao carregar lista');
+      }
     } catch (error) {
+      console.error('Erro ao carregar games:', error);
       mostrarMensagem(`❌ ${error.message}`, 'erro');
+      setGames([]); // Define como array vazio para evitar erros
     } finally {
       setModalLoading(false);
     }
@@ -219,7 +237,7 @@ function App() {
   };
 
   const filteredGames = games.filter(game =>
-    game.nome.toLowerCase().includes(searchTerm.toLowerCase())
+    game.nome && game.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleVibrateClick = (action) => {
@@ -328,7 +346,6 @@ function App() {
           </div>
           <p className={styles['sp-footer-text']}>🎮 STEAM PROMO 2.0 🛡</p>
           
-          {/* Botão flutuante Games Cadastrados - Mobile */}
           <button
             className={styles['sp-btn-float-games-mobile']}
             onClick={() => handleVibrateClick(openModal)}
@@ -341,7 +358,6 @@ function App() {
           {[...Array(8)].map((_, i) => <span key={i} className={styles['sp-px']} />)}
         </div>
 
-        {/* Botão Games Cadastrados - Desktop */}
         <button
           className={styles['sp-btn-float-games-desktop']}
           onClick={() => handleVibrateClick(openModal)}
