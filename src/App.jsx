@@ -66,13 +66,9 @@ function Particles() {
 }
 
 function cleanGameName(name) {
-  // Remove padrões como "Save X% on "
   name = name.replace(/^Save \d+% on /i, '');
-  // Remover emojis ou símbolos indesejados (ex: se começar com emoji, remover)
   name = name.replace(/^[^a-zA-Z0-9]+/, '');
-  // Remover sufixos e prefixos especiais como ™, ®, ©, etc.
   name = name.replace(/[\u2122\u00AE\u00A9\u2120]+/g, '');
-  // Remover "Base " se seguido de "Game", mas manter versão/DLC
   name = name.replace(/Base Game/g, 'Game');
   return name.trim();
 }
@@ -109,18 +105,13 @@ function App() {
   const [gameAtual, setGameAtual] = useState(null);
   const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
   const [loading, setLoading] = useState(false);
-  // UX: hide enviar button when game already exists or on error until new search
   const [enviarBloqueado, setEnviarBloqueado] = useState(false);
   const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
 
   const mostrarMensagem = (texto, tipo = 'info', playSound = false) => {
     setMensagem({ texto, tipo });
-    // Play sound based on type
-    if (tipo === 'erro') {
-      new Audio(errorMp3).play();
-    } else if (playSound && tipo === 'sucesso') {
-      new Audio(entrouMp3).play();
-    }
+    if (tipo === 'erro') new Audio(errorMp3).play();
+    else if (playSound && tipo === 'sucesso') new Audio(entrouMp3).play();
   };
 
   const buscar = async () => {
@@ -141,7 +132,7 @@ function App() {
       const res = await response.json();
       if (!response.ok || res.status !== 'ok') throw new Error(res.mensagem || 'Erro ao buscar jogo');
       res.nome = cleanGameName(res.nome);
-      res.url = url; // Salva a URL original para usar no enviar
+      res.url = url;
       setGameAtual(res);
       mostrarMensagem('✅ Jogo encontrado!', 'sucesso');
       setUrl('');
@@ -177,7 +168,7 @@ function App() {
         setEnviarBloqueado(false);
       } else if (res.status === 'existe') {
         mostrarMensagem(res.mensagem, 'aviso');
-        setEnviarBloqueado(true); // hide enviar button: game already tracked
+        setEnviarBloqueado(true);
       } else {
         throw new Error(res.mensagem || 'Erro ao enviar');
       }
@@ -199,7 +190,6 @@ function App() {
       <Particles />
       <div className={styles['sp-scanlines']} />
       <div className={styles['sp-card']}>
-        {/* Profile avatar - agora centralizado no topo */}
         <div className={styles['sp-avatar']}>
           <img
             src="https://7fases.github.io/youtube/imagens/Logo%20versao%202.0.webp"
@@ -210,7 +200,7 @@ function App() {
         <span className={`${styles['sp-corner']} ${styles['sp-tr']}`} />
         <span className={`${styles['sp-corner']} ${styles['sp-bl']}`} />
         <span className={`${styles['sp-corner']} ${styles['sp-br']}`} />
-        {/* Header */}
+
         <header className={styles['sp-header']}>
           <span className={styles['sp-hicon']}>🎮</span>
           <div className={styles['sp-title-block']}>
@@ -219,13 +209,13 @@ function App() {
           </div>
           <span className={styles['sp-hicon']}>🛡</span>
         </header>
-        {/* Divider */}
+
         <div className={styles['sp-divider']}>
           <span className={styles['sp-dot']} />
           <span className={styles['sp-line']} />
           <span className={styles['sp-dot']} />
         </div>
-        {/* Social */}
+
         <div className={styles['sp-social-section']}>
           <p className={styles['sp-social-label']}>Acompanhe as promos pelo Discord e Telegram</p>
           <div className={styles['sp-social-btns']}>
@@ -239,22 +229,20 @@ function App() {
             </a>
           </div>
         </div>
-        {/* Divider */}
+
         <div className={styles['sp-divider']}>
           <span className={styles['sp-dot']} />
           <span className={styles['sp-line']} />
           <span className={styles['sp-dot']} />
         </div>
-        {/* Form wrapper */}
+
         <div className={styles['sp-form-wrapper']}>
-          {/* Message */}
           {mensagem.texto && (
             <MessageBubble
               mensagem={mensagem}
               onExiting={() => setMensagem({ texto: '', tipo: '' })}
             />
           )}
-          {/* Form */}
           <div className={styles['sp-form']}>
             <label className={`${styles['sp-label']} ${mensagem.texto ? styles['sp-label-hidden'] : ''}`} htmlFor="steamUrl">🎮 URL DA STEAM:</label>
             <div className={styles['sp-input-group']}>
@@ -273,14 +261,12 @@ function App() {
                 onClick={() => handleVibrateClick(buscar)}
                 disabled={loading}
               >
-                {loading ? (
-                  <span className={styles['sp-dots']}><span>.</span><span>.</span><span>.</span></span>
-                ) : '🔍'}
+                {loading ? <span className={styles['sp-dots']}><span>.</span><span>.</span><span>.</span></span> : '🔍'}
               </button>
             </div>
           </div>
         </div>
-        {/* Game result */}
+
         {gameAtual?.imagem && (
           <div className={styles['sp-game-card']}>
             <div className={styles['sp-img-frame']}>
@@ -290,25 +276,24 @@ function App() {
             </div>
           </div>
         )}
+
         {gameAtual && !enviarBloqueado && (
           <button
             className={`${styles['sp-btn']} ${styles['sp-btn-green']}`}
             onClick={() => handleVibrateClick(enviar)}
             disabled={loading}
           >
-            {loading ? (
-              <span className={styles['sp-dots']}>ENVIANDO<span>.</span><span>.</span><span>.</span></span>
-            ) : '⭐ ENVIAR SUGESTÃO'}
+            {loading ? <span className={styles['sp-dots']}>ENVIANDO<span>.</span><span>.</span><span>.</span></span> : '⭐ ENVIAR SUGESTÃO'}
           </button>
         )}
-        {/* Footer */}
+
         <footer className={styles['sp-footer']}>
           <div className={styles['sp-pixels']}>
             {[...Array(8)].map((_, i) => <span key={i} className={styles['sp-px']} />)}
           </div>
           <p className={styles['sp-footer-text']}>🎮 STEAM PROMO 2.0 🛡</p>
         </footer>
-        {/* Pixels desktop repositionados */}
+
         <div className={styles['sp-pixels-desktop']}>
           {[...Array(8)].map((_, i) => <span key={i} className={styles['sp-px']} />)}
         </div>
