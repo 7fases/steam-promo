@@ -24,21 +24,18 @@
   --sp-shadow: 4px 4px 0 #00000099;
   --sp-font-title: 'Press Start 2P', monospace;
   --sp-font-body: 'VT323', 'Courier New', monospace;
-
   /* ==================== CONTROLE DE TRANSPARÊNCIA AQUI ==================== */
   --sp-bubble-alpha-start: 0.92; /* Aumentado para maior opacidade inicial */
-  --sp-bubble-alpha-end: 0.88;   /* Aumentado para maior opacidade final, melhor legibilidade */
+  --sp-bubble-alpha-end: 0.88; /* Aumentado para maior opacidade final, melhor legibilidade */
 }
-
 /* Bloqueia seleção de texto em todo o site */
 * {
-  user-select: none;       /* Bloqueia seleção em desktop */
+  user-select: none; /* Bloqueia seleção em desktop */
   -webkit-user-select: none; /* Safari/Chrome */
-  -moz-user-select: none;  /* Firefox */
-  -ms-user-select: none;   /* IE/Edge */
-  pointer-events: auto;    /* Mantém a possibilidade de clicar, mas não selecionar */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE/Edge */
+  pointer-events: auto; /* Mantém a possibilidade de clicar, mas não selecionar */
 }
-
 /* Remove seleção de inputs e textareas */
 input, textarea {
   user-select: none;
@@ -47,10 +44,6 @@ input, textarea {
   -ms-user-select: none;
   caret-color: transparent; /* Remove o cursor piscando */
 }
-
-
-
-
 .sp-wrap {
   min-height: 100vh;
   background:
@@ -664,7 +657,7 @@ input, textarea {
   .sp-wrap { padding: 80px 24px 60px; }
   .sp-card { max-width: 680px; padding: 44px 40px 36px; }
   .sp-img-frame img { max-height: 300px; }
-  .sp-avatar { width: 68px; height: 68px; top: -52px; } /* Ajustado proporcionalmente */
+  .sp-avatar { width: 98px; height: 98px; top: -72px; } /* Ajustado proporcionalmente */
   .sp-pixels-desktop {
     display: flex;
     position: absolute;

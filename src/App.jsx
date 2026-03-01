@@ -4,7 +4,6 @@ import telegramIcon from './assets/telegram.svg';
 import discordIcon from './assets/discord.svg';
 import errorMp3 from './assets/error.mp3';
 import entrouMp3 from './assets/entrou.mp3';
-
 // Particles canvas
 function Particles() {
   const canvasRef = useRef(null);
@@ -64,7 +63,6 @@ function Particles() {
   }, []);
   return <canvas ref={canvasRef} className={styles['sp-canvas']} />;
 }
-
 function cleanGameName(name) {
   name = name.replace(/^Save \d+% on /i, '');
   name = name.replace(/^[^a-zA-Z0-9]+/, '');
@@ -72,7 +70,6 @@ function cleanGameName(name) {
   name = name.replace(/Base Game/g, 'Game');
   return name.trim();
 }
-
 function MessageBubble({ mensagem, onExiting }) {
   const [isExiting, setIsExiting] = useState(false);
   useEffect(() => {
@@ -99,7 +96,6 @@ function MessageBubble({ mensagem, onExiting }) {
     </div>
   );
 }
-
 function App() {
   const [url, setUrl] = useState('');
   const [gameAtual, setGameAtual] = useState(null);
@@ -107,13 +103,11 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [enviarBloqueado, setEnviarBloqueado] = useState(false);
   const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
-
   const mostrarMensagem = (texto, tipo = 'info', playSound = false) => {
     setMensagem({ texto, tipo });
     if (tipo === 'erro') new Audio(errorMp3).play();
     else if (playSound && tipo === 'sucesso') new Audio(entrouMp3).play();
   };
-
   const buscar = async () => {
     if (!url.match(steamRegex)) {
       mostrarMensagem('⚠️ URL inválida! Insira uma URL da Steam.', 'erro');
@@ -142,7 +136,6 @@ function App() {
       setLoading(false);
     }
   };
-
   const enviar = async () => {
     if (!gameAtual) return;
     mostrarMensagem('⏳ Enviando sugestão...', 'info');
@@ -179,12 +172,10 @@ function App() {
       setLoading(false);
     }
   };
-
   const handleVibrateClick = (action) => {
     if (navigator.vibrate) navigator.vibrate(50);
     action();
   };
-
   return (
     <div className={styles['sp-wrap']}>
       <Particles />
@@ -192,7 +183,7 @@ function App() {
       <div className={styles['sp-card']}>
         <div className={styles['sp-avatar']}>
           <img
-            src="https://7fases.github.io/youtube/imagens/Logo%20versao%202.0.webp"
+            src="src\assets\Logo2.1.webp"
             alt="7Fases"
           />
         </div>
@@ -200,7 +191,6 @@ function App() {
         <span className={`${styles['sp-corner']} ${styles['sp-tr']}`} />
         <span className={`${styles['sp-corner']} ${styles['sp-bl']}`} />
         <span className={`${styles['sp-corner']} ${styles['sp-br']}`} />
-
         <header className={styles['sp-header']}>
           <span className={styles['sp-hicon']}>🎮</span>
           <div className={styles['sp-title-block']}>
@@ -209,13 +199,11 @@ function App() {
           </div>
           <span className={styles['sp-hicon']}>🛡</span>
         </header>
-
         <div className={styles['sp-divider']}>
           <span className={styles['sp-dot']} />
           <span className={styles['sp-line']} />
           <span className={styles['sp-dot']} />
         </div>
-
         <div className={styles['sp-social-section']}>
           <p className={styles['sp-social-label']}>Acompanhe as promos pelo Discord e Telegram</p>
           <div className={styles['sp-social-btns']}>
@@ -229,13 +217,11 @@ function App() {
             </a>
           </div>
         </div>
-
         <div className={styles['sp-divider']}>
           <span className={styles['sp-dot']} />
           <span className={styles['sp-line']} />
           <span className={styles['sp-dot']} />
         </div>
-
         <div className={styles['sp-form-wrapper']}>
           {mensagem.texto && (
             <MessageBubble
@@ -244,7 +230,7 @@ function App() {
             />
           )}
           <div className={styles['sp-form']}>
-            <label className={`${styles['sp-label']} ${mensagem.texto ? styles['sp-label-hidden'] : ''}`} htmlFor="steamUrl">🎮 URL DA STEAM:</label>
+            <label className={`${styles['sp-label']} ${mensagem.texto ? styles['sp-label-hidden'] : ''}`} htmlFor="steamUrl">🎮 ADICIONE UM GAME A LISTA! URL DA STEAM:</label>
             <div className={styles['sp-input-group']}>
               <input
                 id="steamUrl"
@@ -266,7 +252,6 @@ function App() {
             </div>
           </div>
         </div>
-
         {gameAtual?.imagem && (
           <div className={styles['sp-game-card']}>
             <div className={styles['sp-img-frame']}>
@@ -276,7 +261,6 @@ function App() {
             </div>
           </div>
         )}
-
         {gameAtual && !enviarBloqueado && (
           <button
             className={`${styles['sp-btn']} ${styles['sp-btn-green']}`}
@@ -286,14 +270,12 @@ function App() {
             {loading ? <span className={styles['sp-dots']}>ENVIANDO<span>.</span><span>.</span><span>.</span></span> : '⭐ ENVIAR SUGESTÃO'}
           </button>
         )}
-
         <footer className={styles['sp-footer']}>
           <div className={styles['sp-pixels']}>
             {[...Array(8)].map((_, i) => <span key={i} className={styles['sp-px']} />)}
           </div>
           <p className={styles['sp-footer-text']}>🎮 STEAM PROMO 2.0 🛡</p>
         </footer>
-
         <div className={styles['sp-pixels-desktop']}>
           {[...Array(8)].map((_, i) => <span key={i} className={styles['sp-px']} />)}
         </div>
@@ -301,5 +283,4 @@ function App() {
     </div>
   );
 }
-
 export default App;
