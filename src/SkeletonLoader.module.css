@@ -2,10 +2,10 @@
 
 @keyframes sk-shimmer {
   0% {
-    background-position: -1000px 0;
+    background-position: -200px 0;
   }
   100% {
-    background-position: 1000px 0;
+    background-position: calc(200px + 100%) 0;
   }
 }
 
@@ -16,6 +16,7 @@
   overflow-y: auto;
   flex: 1;
   padding-right: 8px;
+  min-height: 0;
 }
 
 .sk-game-item {
@@ -49,12 +50,15 @@
   border-radius: 4px;
   background: linear-gradient(
     90deg,
-    rgba(77, 126, 255, 0.1) 0%,
-    rgba(77, 126, 255, 0.2) 50%,
-    rgba(77, 126, 255, 0.1) 100%
+    rgba(77, 126, 255, 0.08) 0%,
+    rgba(77, 126, 255, 0.15) 25%,
+    rgba(77, 126, 255, 0.08) 50%,
+    rgba(77, 126, 255, 0.15) 75%,
+    rgba(77, 126, 255, 0.08) 100%
   );
-  background-size: 1000px 100%;
-  animation: sk-shimmer 2s infinite;
+  background-size: 200px 100%;
+  background-position: -200px 0;
+  animation: sk-shimmer 2s infinite linear;
   flex-shrink: 0;
 }
 
@@ -63,6 +67,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  width: 100%;
 }
 
 .sk-text {
@@ -70,10 +75,13 @@
   border-radius: 4px;
   background: linear-gradient(
     90deg,
-    rgba(77, 126, 255, 0.1) 0%,
-    rgba(77, 126, 255, 0.2) 50%,
-    rgba(77, 126, 255, 0.1) 100%
+    rgba(77, 126, 255, 0.08) 0%,
+    rgba(77, 126, 255, 0.15) 25%,
+    rgba(77, 126, 255, 0.08) 50%,
+    rgba(77, 126, 255, 0.15) 75%,
+    rgba(77, 126, 255, 0.08) 100%
   );
-  background-size: 1000px 100%;
-  animation: sk-shimmer 2s infinite;
+  background-size: 200px 100%;
+  background-position: -200px 0;
+  animation: sk-shimmer 2s infinite linear;
 }
