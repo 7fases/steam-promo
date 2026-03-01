@@ -183,7 +183,7 @@ function App() {
       <div className={styles['sp-card']}>
         <div className={styles['sp-avatar']}>
           <img
-            src="public\Logo2.1.webp"
+            src="Logo2.1.webp"
             
           />
         </div>
