@@ -102,6 +102,10 @@ function App() {
   const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
   const [loading, setLoading] = useState(false);
   const [enviarBloqueado, setEnviarBloqueado] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [games, setGames] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [modalLoading, setModalLoading] = useState(false);
   const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
   const mostrarMensagem = (texto, tipo = 'info', playSound = false) => {
     setMensagem({ texto, tipo });
@@ -172,6 +176,39 @@ function App() {
       setLoading(false);
     }
   };
+  const fetchGames = async () => {
+    setModalLoading(true);
+    try {
+      const response = await fetch('https://steam-promo.vercel.app/api/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ acao: 'listar' }),
+      });
+      const res = await response.json();
+      if (res.status === 'ok') {
+        setGames(res.games);
+      } else {
+        throw new Error(res.mensagem || 'Erro ao carregar lista');
+      }
+    } catch (error) {
+      mostrarMensagem(`❌ ${error.message}`, 'erro');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+  const openModal = async () => {
+    if (games.length === 0) {
+      await fetchGames();
+    }
+    setIsModalOpen(true);
+    setSearchTerm('');
+  };
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
+  const filteredGames = games.filter(game =>
+    game.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  );
   const handleVibrateClick = (action) => {
     if (navigator.vibrate) navigator.vibrate(50);
     action();
@@ -184,7 +221,7 @@ function App() {
         <div className={styles['sp-avatar']}>
           <img
             src="Logo2.1.webp"
-            
+            alt="7Fases"
           />
         </div>
         <span className={`${styles['sp-corner']} ${styles['sp-tl']}`} />
@@ -231,6 +268,14 @@ function App() {
           )}
           <div className={styles['sp-form']}>
             <label className={`${styles['sp-label']} ${mensagem.texto ? styles['sp-label-hidden'] : ''}`} htmlFor="steamUrl">🎮 ADICIONE UM GAME A LISTA! URL DA STEAM:</label>
+            {!mensagem.texto && !loading && (
+              <button
+                className={`${styles['sp-btn']} ${styles['sp-btn-blue']} ${styles['sp-btn-float']}`}
+                onClick={() => handleVibrateClick(openModal)}
+              >
+                📋 Games Cadastrados
+              </button>
+            )}
             <div className={styles['sp-input-group']}>
               <input
                 id="steamUrl"
@@ -269,6 +314,38 @@ function App() {
           >
             {loading ? <span className={styles['sp-dots']}>ENVIANDO<span>.</span><span>.</span><span>.</span></span> : '⭐ ENVIAR SUGESTÃO'}
           </button>
+        )}
+        {isModalOpen && (
+          <div className={styles['sp-modal-overlay']} onClick={closeModal}>
+            <div className={styles['sp-modal']} onClick={(e) => e.stopPropagation()}>
+              <button className={styles['sp-modal-close']} onClick={closeModal}>✖</button>
+              <h2 className={styles['sp-modal-title']}>Games Cadastrados</h2>
+              <input
+                className={styles['sp-modal-search']}
+                type="text"
+                placeholder="Buscar game..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              {modalLoading ? (
+                <p className={styles['sp-modal-loading']}>Carregando...</p>
+              ) : (
+                <ul className={styles['sp-modal-list']}>
+                  {filteredGames.length > 0 ? (
+                    filteredGames.map((game, index) => (
+                      <li key={index}>
+                        <a href={game.url} target="_blank" rel="noopener noreferrer">
+                          {game.nome}
+                        </a>
+                      </li>
+                    ))
+                  ) : (
+                    <li>Nenhum game encontrado.</li>
+                  )}
+                </ul>
+              )}
+            </div>
+          </div>
         )}
         <footer className={styles['sp-footer']}>
           <div className={styles['sp-pixels']}>
