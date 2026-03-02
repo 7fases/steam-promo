@@ -67,14 +67,19 @@ function Particles() {
   return <canvas ref={canvasRef} className={styles['sp-canvas']} />;
 }
 
-// ✅ SKELETON LOADER PARA IMAGEM
+// ✅ SKELETON LOADER COM PIXEL GRID 8-BIT
 function SkeletonGameCard() {
   return (
     <div className={styles['sp-game-card']}>
       <div className={styles['sp-img-frame']}>
-        <div className={styles['sp-skeleton-img']} />
+        <div className={styles['sp-skeleton-img']}>
+          {/* Pixel grid dots overlay */}
+          <div className={styles['sp-pixel-grid-overlay']} />
+        </div>
         <div className={styles['sp-img-overlay']} />
-        <div className={styles['sp-skeleton-text']} />
+        <div className={styles['sp-skeleton-text']}>
+          <div className={styles['sp-skeleton-text-cursor']} />
+        </div>
       </div>
     </div>
   );
@@ -111,6 +116,7 @@ function App() {
   const [url, setUrl] = useState('');
   const [gameAtual, setGameAtual] = useState(null);
   const [imageLoading, setImageLoading] = useState(false);
+  const [imageRevealed, setImageRevealed] = useState(false);
   const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
   const [loading, setLoading] = useState(false);
   const [enviarBloqueado, setEnviarBloqueado] = useState(false);
@@ -121,6 +127,7 @@ function App() {
   const [hasLoadedGames, setHasLoadedGames] = useState(false);
   const modalRef = useRef(null);
   const imgRef = useRef(null);
+  const revealRef = useRef(null);
 
   const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
 
@@ -131,15 +138,14 @@ function App() {
   };
 
   const buscar = async () => {
-    // ✅ Valida URL IMEDIATAMENTE
     if (!url.match(steamRegex)) {
       mostrarMensagem('⚠️ URL inválida! Insira uma URL da Steam.', 'erro');
       return;
     }
     
-    // ✅ Mostra skeleton IMEDIATAMENTE ao clicar em buscar
     setGameAtual({ nome: '', imagem: '', id: '', tipo: '' });
     setImageLoading(true);
+    setImageRevealed(false);
     
     mostrarMensagem('⏳ Buscando dados...', 'info');
     setLoading(true);
@@ -153,10 +159,10 @@ function App() {
       });
       const res = await response.json();
       
-      // ✅ Se for gratuito, mostra alerta amarelo e bloqueia
       if (res.status === 'gratuito') {
         setGameAtual(null);
         setImageLoading(false);
+        setImageRevealed(false);
         mostrarMensagem(res.mensagem, 'aviso');
         setEnviarBloqueado(true);
         setUrl('');
@@ -164,18 +170,16 @@ function App() {
         return;
       }
       
-      // ✅ Se der erro, para o skeleton e limpa tudo
       if (!response.ok || res.status !== 'ok') {
         setGameAtual(null);
         setImageLoading(false);
+        setImageRevealed(false);
         throw new Error(res.mensagem || 'Erro ao buscar jogo');
       }
       
       res.url = url;
       setGameAtual(res);
       
-      // ✅ Se tem imagem, continua com imageLoading=true para carregar
-      // Se não tem imagem, desativa o loading
       if (res.imagem) {
         setImageLoading(true);
       } else {
@@ -185,25 +189,32 @@ function App() {
       mostrarMensagem('✅ Jogo encontrado!', 'sucesso');
       setUrl('');
     } catch (error) {
-      // ✅ Garante que para o skeleton em caso de erro
       setImageLoading(false);
+      setImageRevealed(false);
       mostrarMensagem(`❌ ${error.message}`, 'erro');
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Quando a imagem REALMENTE carrega - com graceful transition
+  // ✅ Quando a imagem REALMENTE carrega — inicia pixel reveal
   const handleImageLoad = () => {
-    // Aguarda um pouco para a transição suave
     setTimeout(() => {
       setImageLoading(false);
     }, 100);
   };
 
-  // ✅ Quando a imagem falha em carregar, para o skeleton
+  // ✅ Cleanup after pixel reveal animation ends
+  const handleRevealEnd = (e) => {
+    // Only respond to the pixel-dissolve animation ending
+    if (e.animationName.includes('pixel-dissolve') || e.animationName.includes('pixelDissolve')) {
+      setImageRevealed(true);
+    }
+  };
+
   const handleImageError = () => {
     setImageLoading(false);
+    setImageRevealed(false);
   };
 
   const enviar = async () => {
@@ -229,6 +240,7 @@ function App() {
         setGameAtual(null);
         setUrl('');
         setImageLoading(false);
+        setImageRevealed(false);
         setEnviarBloqueado(false);
       } else if (res.status === 'existe') {
         mostrarMensagem(res.mensagem, 'aviso');
@@ -387,16 +399,20 @@ function App() {
           </div>
         </div>
 
-        {/* ✅ MOSTRA SKELETON ENQUANTO imageLoading FOR TRUE COM TRANSIÇÃO */}
+        {/* ✅ SKELETON COM PIXEL GRID ENQUANTO CARREGA */}
         {imageLoading && gameAtual ? (
           <div className={styles['sp-skeleton-wrapper']}>
             <SkeletonGameCard />
           </div>
         ) : null}
 
-        {/* ✅ MOSTRA IMAGEM REAL QUANDO NÃO ESTÁ CARREGANDO COM GRACEFUL TRANSITION */}
+        {/* ✅ IMAGEM COM PIXEL REVEAL TRANSITION */}
         {gameAtual?.imagem && !imageLoading && (
-          <div className={styles['sp-game-card-wrapper']}>
+          <div 
+            ref={revealRef}
+            className={`${styles['sp-game-card-wrapper']} ${imageRevealed ? styles['sp-reveal-done'] : ''}`}
+            onAnimationEnd={handleRevealEnd}
+          >
             <div className={styles['sp-game-card']}>
               <div className={styles['sp-img-frame']}>
                 <img 
@@ -407,9 +423,15 @@ function App() {
                   onError={handleImageError}
                   className={styles['sp-game-image']}
                 />
+                {/* Pixel dissolve overlay */}
+                {!imageRevealed && <div className={styles['sp-pixel-dissolve']} />}
+                {/* Scanline sweep */}
+                {!imageRevealed && <div className={styles['sp-scanline-sweep']} />}
                 <div className={styles['sp-img-overlay']} />
-                <p className={styles['sp-game-name']}>🎮 {gameAtual.nome}</p>
+                <p className={`${styles['sp-game-name']} ${!imageRevealed ? styles['sp-name-pixelate'] : ''}`}>🎮 {gameAtual.nome}</p>
               </div>
+              {/* Golden glow pulse on reveal */}
+              {!imageRevealed && <div className={styles['sp-reveal-glow']} />}
             </div>
           </div>
         )}
