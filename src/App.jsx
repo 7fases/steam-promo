@@ -67,6 +67,7 @@ function Particles() {
   return <canvas ref={canvasRef} className={styles['sp-canvas']} />;
 }
 
+// ✅ Limpar nome do game
 function cleanGameName(name) {
   // Remove promoção inicial
   name = name.replace(/^Save \d+% on /i, '');
@@ -74,49 +75,83 @@ function cleanGameName(name) {
   // Remove símbolos de marca registrada/copyright/trademark
   name = name.replace(/[\u2122\u00AE\u00A9\u2120]+/g, '');
   
-  // Remove espaços extras e símbolos no início
+  // Remove espaços extras no início
   name = name.replace(/^[\s\-:]+/, '');
   
-  // Substituir "Base Game" por "Game" apenas se houver versão específica depois
-  // Preserva versões como: Ultimate Edition, Deluxe Edition, Complete Edition, etc.
-  
-  // Lista de designadores de versão que devem ser preservados
-  const versionPatterns = [
-    'Ultimate Edition',
-    'Deluxe Edition',
-    'Complete Edition',
-    'Standard Edition',
-    'Premium Edition',
-    'Gold Edition',
-    'Collector\'s Edition',
-    'Bundle',
-    'Upgraded Edition',
-    'Enhanced Edition',
-    'Extended Edition',
-    'Special Edition',
-    'Legacy Edition',
-    'Anniversary Edition',
-    'Remastered',
-    'Director\'s Cut',
-    'Season Pass',
-    'Expansion',
-    'DLC',
-  ];
-  
-  // Verifica se contém algum padrão de versão
-  const hasVersion = versionPatterns.some(pattern => 
-    new RegExp(pattern, 'i').test(name)
-  );
-  
-  // Só substitui "Base Game" se NÃO houver versão específica
-  if (!hasVersion) {
-    name = name.replace(/\s*Base Game\s*/gi, ' ');
-  }
+  // Remove " on Steam" do final
+  name = name.replace(/\s+on\s+Steam$/i, '');
   
   // Remove espaços múltiplos
   name = name.replace(/\s+/g, ' ');
   
   return name.trim();
+}
+
+// ✅ Buscar nome completo via SteamDB API
+async function fetchBundleNameFromSteamDB(tipo, id) {
+  try {
+    const response = await fetch(
+      `https://steamdb.info/api/v1/${tipo}/${id}/`,
+      {
+        headers: {
+          'Accept': 'application/json',
+        }
+      }
+    );
+    
+    if (!response.ok) {
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    // SteamDB retorna o nome completo em data.name
+    if (data && data.name) {
+      return cleanGameName(data.name);
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Erro ao buscar de SteamDB:', error);
+    return null;
+  }
+}
+
+// ✅ Alternativa: Se SteamDB não funcionar, usa scraping do lado do cliente
+async function fetchBundleNameFromSteamPage(url) {
+  try {
+    // Usa um CORS proxy gratuito
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    
+    const response = await fetch(proxyUrl, {
+      headers: {
+        'Accept': 'text/html',
+      }
+    });
+    
+    if (!response.ok) {
+      return null;
+    }
+    
+    const html = await response.text();
+    
+    // Busca og:title (meta tag - tem o nome completo)
+    let match = html.match(/<meta\s+property="og:title"\s+content="([^"]+)"/i);
+    if (match) {
+      return cleanGameName(match[1]);
+    }
+    
+    // Fallback: busca no h1
+    match = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+    if (match) {
+      return cleanGameName(match[1]);
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Erro ao fazer scraping:', error);
+    return null;
+  }
 }
 
 function MessageBubble({ mensagem, onExiting }) {
@@ -168,24 +203,55 @@ function App() {
   };
 
   const buscar = async () => {
-    if (!url.match(steamRegex)) {
+    const match = url.match(steamRegex);
+    if (!match) {
       mostrarMensagem('⚠️ URL inválida! Insira uma URL da Steam.', 'erro');
       return;
     }
+
     mostrarMensagem('⏳ Buscando dados...', 'info');
     setLoading(true);
     setEnviarBloqueado(false);
     setGameAtual(null);
+
+    const tipo = match[1].toLowerCase();
+    const id = match[2];
+
     try {
       const response = await fetch('https://steam-promo.vercel.app/api/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ acao: 'buscar', url }),
       });
+
       const res = await response.json();
-      if (!response.ok || res.status !== 'ok') throw new Error(res.mensagem || 'Erro ao buscar jogo');
-      res.nome = cleanGameName(res.nome);
+      if (!response.ok || res.status !== 'ok') {
+        throw new Error(res.mensagem || 'Erro ao buscar jogo');
+      }
+
       res.url = url;
+
+      // ✅ Se for bundle/sub/package, tenta buscar nome completo
+      if (tipo === 'sub' || tipo === 'bundle' || tipo === 'package') {
+        // Tenta SteamDB primeiro (mais rápido)
+        let nomeCompleto = await fetchBundleNameFromSteamDB(tipo, id);
+        
+        // Se SteamDB não retornar, tenta scraping
+        if (!nomeCompleto) {
+          nomeCompleto = await fetchBundleNameFromSteamPage(url);
+        }
+        
+        // Se ainda não tiver nome, usa o que veio do backend
+        if (nomeCompleto) {
+          res.nome = nomeCompleto;
+        } else {
+          res.nome = cleanGameName(res.nome);
+        }
+      } else {
+        // Para apps, já vem correto do backend
+        res.nome = cleanGameName(res.nome);
+      }
+
       setGameAtual(res);
       mostrarMensagem('✅ Jogo encontrado!', 'sucesso');
       setUrl('');
@@ -255,7 +321,6 @@ function App() {
         throw new Error('Formato de dados inválido');
       }
 
-
       setGames(games);
       setHasLoadedGames(true);
     } catch (error) {
@@ -267,23 +332,19 @@ function App() {
     }
   };
 
-const openModal = async () => {
-  setIsModalOpen(true);
-  setSearchTerm('');
+  const openModal = async () => {
+    setIsModalOpen(true);
+    setSearchTerm('');
+    setModalLoading(true);
 
-  // Sempre ativa o loading visual
-  setModalLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 600));
 
-  // Pequeno delay para forçar animação
-  await new Promise(resolve => setTimeout(resolve, 600));
+    if (!hasLoadedGames) {
+      await fetchGames();
+    }
 
-  // Só busca da API se ainda não tiver carregado
-  if (!hasLoadedGames) {
-    await fetchGames();
-  }
-
-  setModalLoading(false);
-};
+    setModalLoading(false);
+  };
 
   const closeModal = () => {
     setIsModalOpen(false);
