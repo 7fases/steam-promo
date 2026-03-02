@@ -1797,7 +1797,7 @@
   {
     "nome": "The Dark Pictures Anthology: Season One",
     "url": "https://store.steampowered.com/bundle/27477/The_Dark_Pictures_Anthology_Season_One/",
-    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/939850/header.jpg?t=1728913265"
+    "imagem": "https://shared.fastly.steamstatic.com/store_item_assets/steam/bundles/27477/r1u6439izk4nrmwa/header.jpg?t=1668545429"
   },
   {
     "nome": "Core Keeper",
@@ -2147,7 +2147,7 @@
   {
     "nome": "Planet Coaster 2: Premium Edition",
     "url": "https://store.steampowered.com/bundle/48480/Planet_Coaster_2_Premium_Edition/",
-    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2688950/header.jpg?t=1770120190"
+    "imagem": "https://shared.fastly.steamstatic.com/store_item_assets/steam/bundles/48480/up5g5w0rqlhe4hdk/c16f9501754f6594ce0dc7b666769b550d1e1b0c/header_ratio.jpg?t=1734002218"
   },
   {
     "nome": "Dune: Awakening",
@@ -2268,5 +2268,15 @@
     "nome": "Tom Clancy’s The Division 2",
     "url": "https://store.steampowered.com/app/2221490",
     "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2221490/header.jpg?t=1772217895"
+  },
+  {
+    "nome": "STAR WARS Jedi: Survivor",
+    "url": "https://store.steampowered.com/app/1774580",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1774580/header.jpg?t=1748945254"
+  },
+  {
+    "nome": "God of Weapons Game + DLC",
+    "url": "https://store.steampowered.com/bundle/54044",
+    "imagem": "https://shared.fastly.steamstatic.com/store_item_assets/steam/bundles/54044/89qd58rz691q9avi/f09ce727cd273abc756bdb420f19783f3cecbefd/header_ratio.jpg?t=1747367428"
   }
 ]
