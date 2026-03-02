@@ -77,32 +77,44 @@ function cleanGameName(name) {
   // Remove espaços extras e símbolos no início
   name = name.replace(/^[\s\-:]+/, '');
   
-  // Lista de versões a preservar
+  // Substituir "Base Game" por "Game" apenas se houver versão específica depois
+  // Preserva versões como: Ultimate Edition, Deluxe Edition, Complete Edition, etc.
+  
+  // Lista de designadores de versão que devem ser preservados
   const versionPatterns = [
-    'Ultimate Edition', 'Deluxe Edition', 'Complete Edition', 'Standard Edition',
-    'Premium Edition', 'Gold Edition', 'Collector\'s Edition', 'Bundle',
-    'Upgraded Edition', 'Enhanced Edition', 'Extended Edition', 'Special Edition',
-    'Legacy Edition', 'Anniversary Edition', 'Remastered', 'Director\'s Cut',
-    'Season Pass', 'Expansion', 'DLC'
+    'Ultimate Edition',
+    'Deluxe Edition',
+    'Complete Edition',
+    'Standard Edition',
+    'Premium Edition',
+    'Gold Edition',
+    'Collector\'s Edition',
+    'Bundle',
+    'Upgraded Edition',
+    'Enhanced Edition',
+    'Extended Edition',
+    'Special Edition',
+    'Legacy Edition',
+    'Anniversary Edition',
+    'Remastered',
+    'Director\'s Cut',
+    'Season Pass',
+    'Expansion',
+    'DLC',
   ];
   
+  // Verifica se contém algum padrão de versão
   const hasVersion = versionPatterns.some(pattern => 
     new RegExp(pattern, 'i').test(name)
   );
   
+  // Só substitui "Base Game" se NÃO houver versão específica
   if (!hasVersion) {
     name = name.replace(/\s*Base Game\s*/gi, ' ');
   }
   
-  // Remove hífens extras entre palavras mantendo versões
-  name = name.replace(/\s*-\s*/g, ' - ');
-  name = name.replace(/(\s*-\s*)+/g, ' - '); // Remove múltiplos hífens
-  
   // Remove espaços múltiplos
   name = name.replace(/\s+/g, ' ');
-  
-  // Remove hífens/traços no início/fim
-  name = name.replace(/^\s*-\s*|\s*-\s*$/g, '');
   
   return name.trim();
 }
