@@ -111,6 +111,7 @@ function App() {
   const [url, setUrl] = useState('');
   const [gameAtual, setGameAtual] = useState(null);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(false);
   const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
   const [loading, setLoading] = useState(false);
   const [enviarBloqueado, setEnviarBloqueado] = useState(false);
@@ -134,11 +135,14 @@ function App() {
       mostrarMensagem('⚠️ URL inválida! Insira uma URL da Steam.', 'erro');
       return;
     }
+    
     mostrarMensagem('⏳ Buscando dados...', 'info');
     setLoading(true);
+    setShowSkeleton(true); // ✅ Mostra skeleton IMEDIATAMENTE
     setImageLoaded(false);
     setEnviarBloqueado(false);
     setGameAtual(null);
+    
     try {
       const response = await fetch('https://steam-promo.vercel.app/api/google', {
         method: 'POST',
@@ -146,7 +150,10 @@ function App() {
         body: JSON.stringify({ acao: 'buscar', url }),
       });
       const res = await response.json();
-      if (!response.ok || res.status !== 'ok') throw new Error(res.mensagem || 'Erro ao buscar jogo');
+      if (!response.ok || res.status !== 'ok') {
+        setShowSkeleton(false); // ✅ Para o skeleton em caso de erro
+        throw new Error(res.mensagem || 'Erro ao buscar jogo');
+      }
       res.url = url;
       setGameAtual(res);
       mostrarMensagem('✅ Jogo encontrado!', 'sucesso');
@@ -158,9 +165,10 @@ function App() {
     }
   };
 
-  // ✅ Quando a imagem carrega
+  // ✅ Quando a imagem carrega, para o skeleton
   const handleImageLoad = () => {
     setImageLoaded(true);
+    setShowSkeleton(false);
   };
 
   const enviar = async () => {
@@ -186,6 +194,7 @@ function App() {
         setGameAtual(null);
         setUrl('');
         setImageLoaded(false);
+        setShowSkeleton(false);
         setEnviarBloqueado(false);
       } else if (res.status === 'existe') {
         mostrarMensagem(res.mensagem, 'aviso');
@@ -344,24 +353,39 @@ function App() {
           </div>
         </div>
 
-        {/* ✅ SE ESTÁ CARREGANDO, MOSTRA SKELETON; SE CARREGOU E TEM IMAGEM, MOSTRA IMAGEM */}
-        {gameAtual && !imageLoaded ? (
+        {/* ✅ MOSTRA SKELETON ENQUANTO showSkeleton FOR TRUE */}
+        {showSkeleton ? (
           <SkeletonGameCard />
         ) : null}
 
-        {gameAtual?.imagem && (
+        {/* ✅ MOSTRA IMAGEM REAL QUANDO CARREGOU */}
+        {gameAtual?.imagem && imageLoaded && (
           <div className={styles['sp-game-card']}>
             <div className={styles['sp-img-frame']}>
               <img 
                 src={gameAtual.imagem} 
                 alt={gameAtual.nome}
                 onLoad={handleImageLoad}
-                style={{ display: imageLoaded ? 'block' : 'none' }}
               />
               <div className={styles['sp-img-overlay']} />
               <p className={styles['sp-game-name']}>🎮 {gameAtual.nome}</p>
             </div>
           </div>
+        )}
+
+        {/* ✅ CARREGA IMAGEM INVISÍVEL (para disparar onLoad) */}
+        {gameAtual?.imagem && !imageLoaded && (
+          <img 
+            src={gameAtual.imagem} 
+            alt="preload"
+            style={{ display: 'none' }}
+            onLoad={handleImageLoad}
+            onError={() => {
+              // Se der erro na imagem, para o skeleton
+              setShowSkeleton(false);
+              setImageLoaded(true);
+            }}
+          />
         )}
 
         {gameAtual && !enviarBloqueado && (
