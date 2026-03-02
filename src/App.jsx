@@ -68,10 +68,42 @@ function Particles() {
 }
 
 function cleanGameName(name) {
+  // Remove promoção inicial
   name = name.replace(/^Save \d+% on /i, '');
-  name = name.replace(/^[^a-zA-Z0-9]+/, '');
+  
+  // Remove símbolos de marca registrada/copyright/trademark
   name = name.replace(/[\u2122\u00AE\u00A9\u2120]+/g, '');
-  name = name.replace(/Base Game/g, 'Game');
+  
+  // Remove espaços extras e símbolos no início
+  name = name.replace(/^[\s\-:]+/, '');
+  
+  // Lista de versões a preservar
+  const versionPatterns = [
+    'Ultimate Edition', 'Deluxe Edition', 'Complete Edition', 'Standard Edition',
+    'Premium Edition', 'Gold Edition', 'Collector\'s Edition', 'Bundle',
+    'Upgraded Edition', 'Enhanced Edition', 'Extended Edition', 'Special Edition',
+    'Legacy Edition', 'Anniversary Edition', 'Remastered', 'Director\'s Cut',
+    'Season Pass', 'Expansion', 'DLC'
+  ];
+  
+  const hasVersion = versionPatterns.some(pattern => 
+    new RegExp(pattern, 'i').test(name)
+  );
+  
+  if (!hasVersion) {
+    name = name.replace(/\s*Base Game\s*/gi, ' ');
+  }
+  
+  // Remove hífens extras entre palavras mantendo versões
+  name = name.replace(/\s*-\s*/g, ' - ');
+  name = name.replace(/(\s*-\s*)+/g, ' - '); // Remove múltiplos hífens
+  
+  // Remove espaços múltiplos
+  name = name.replace(/\s+/g, ' ');
+  
+  // Remove hífens/traços no início/fim
+  name = name.replace(/^\s*-\s*|\s*-\s*$/g, '');
+  
   return name.trim();
 }
 
@@ -211,10 +243,6 @@ function App() {
         throw new Error('Formato de dados inválido');
       }
 
-      // Delay de 1.2s apenas na primeira carregada para ver a animação
-      if (!hasLoadedGames) {
-        await new Promise(resolve => setTimeout(resolve, 600));
-      }
 
       setGames(games);
       setHasLoadedGames(true);
@@ -227,14 +255,23 @@ function App() {
     }
   };
 
-  const openModal = async () => {
-    setIsModalOpen(true);
-    setSearchTerm('');
-    
-    if (games.length === 0) {
-      await fetchGames();
-    }
-  };
+const openModal = async () => {
+  setIsModalOpen(true);
+  setSearchTerm('');
+
+  // Sempre ativa o loading visual
+  setModalLoading(true);
+
+  // Pequeno delay para forçar animação
+  await new Promise(resolve => setTimeout(resolve, 600));
+
+  // Só busca da API se ainda não tiver carregado
+  if (!hasLoadedGames) {
+    await fetchGames();
+  }
+
+  setModalLoading(false);
+};
 
   const closeModal = () => {
     setIsModalOpen(false);

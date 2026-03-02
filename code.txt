@@ -1,0 +1,3730 @@
+tenho um grupo no telegram chamado Steam Promo que uso o google planilhas como database e manda games em promoções da Steam e Nuuvem para o telegram, atualizei bastante ele e to pensando o que mais daria pra fazer se interessante nesse sistema, o que você acha que é possivel usando planilha google, vercel, github e sendo de graça
+
+
+
+
+codigos do App Script na planilha google
+Receber dados Steam.gs
+function IMPORTJSON(url, query) {
+  var options = {
+    'method': 'get',
+    'headers': {
+      'Accept': 'application/json'
+    },
+    'muteHttpExceptions': true
+  };
+
+  try {
+    var response = UrlFetchApp.fetch(url, options);
+    var data = JSON.parse(response.getContentText());
+
+    // Se nenhum query é fornecido, retorna o JSON completo
+    if (!query) {
+      return data;
+    }
+
+    // Se um query é fornecido, extrai o valor específico
+    var result = parseJson(data, query);
+    return (result !== undefined) ? result : "Query não encontrada";
+
+  } catch (e) {
+    return "Erro ao buscar ou parsear o JSON: " + e.message;
+  }
+}
+
+function parseJson(json, query) {
+  var path = query.split('/');
+  var node = json;
+  for (var i = 0; i < path.length; i++) {
+    if (node[path[i]] !== undefined) {
+      node = node[path[i]];
+    } else {
+      return undefined;
+    }
+  }
+  return node;
+}
+
+function STEAM_PRICE(appid) {
+  var cache = CacheService.getScriptCache();
+  var cachedData = cache.get(appid + '_price');
+  if (cachedData) {
+    return parseFloat(cachedData);
+  }
+
+  var url = 'https://store.steampowered.com/api/appdetails?appids=' + appid + '&cc=br&filters=price_overview';
+  var data = safeFetch(url);
+
+  if (data && data[appid] && data[appid].success && data[appid].data.price_overview) {
+    var formattedPrice = data[appid].data.price_overview.final_formatted;
+    var priceString = formattedPrice.replace('R$', '').trim().replace(',', '.');
+    var price = parseFloat(priceString);
+
+    cache.put(appid + '_price', price, 3600); // Cache por 1 hora
+    return price;
+  } else {
+    return '#ERROR!';
+  }
+}
+
+function STEAM_PRECO_BASE(appid) {
+  var cache = CacheService.getScriptCache();
+  var cachedData = cache.get(appid + '_baseprice_num');
+  if (cachedData) {
+    return parseFloat(cachedData); // Retornar o valor como número
+  }
+
+  var url = 'https://store.steampowered.com/api/appdetails?appids=' + appid + '&cc=br&l=brazilian';
+  var data = safeFetch(url);
+
+  if (data[appid].success && data[appid].data.price_overview) {
+    var initialPrice = data[appid].data.price_overview.initial;
+    var priceInReal = initialPrice / 100; // Converter centavos para reais
+
+    cache.put(appid + '_baseprice_num', priceInReal.toString(), 3600); // Cache por 1 hora
+    return priceInReal; // Retornar o preço como número
+  } else {
+    return '#ERROR!';
+  }
+}
+
+function STEAM_BUNDLE_PRICE(id) {
+  var cache = CacheService.getScriptCache();
+  var cachedData = cache.get(id + '_bundleprice');
+  if (cachedData) {
+    return parseFloat(cachedData.replace('R$ ', '').replace(',', '.'));
+  }
+
+  var url = 'https://store.steampowered.com/actions/ajaxresolvebundles?bundleids=' + id + '&cc=br&l=?cc=br';
+
+  try {
+    var response = UrlFetchApp.fetch(url);
+    var content = response.getContentText();
+
+    var regex = /<div class="price bundle_final_price_with_discount"[^>]*>(.*?)<\/div>/s;
+    var match = content.match(regex);
+
+    if (!match || match.length < 2) {
+      throw new Error('Estrutura de preço do bundle não encontrada na página');
+    }
+
+    var finalPriceString = match[1].trim();
+    var finalPrice = parseFloat(finalPriceString.replace('R$ ', '').replace(',', '.'));
+
+    cache.put(id + '_bundleprice', finalPriceString, 3600); // Cache por 1 hora
+    return finalPrice;
+  } catch (error) {
+    Logger.log('Erro ao buscar preço do bundle:', error);
+    return '#ERROR!';
+  }
+}
+
+// Função para fazer a requisição com tratamento de exceções e tentativas
+function safeFetch(url) {
+  var options = {
+    'method': 'get',
+    'headers': {
+      'Accept': 'application/json'
+    },
+    'muteHttpExceptions': true
+  };
+  
+  for (var i = 0; i < 3; i++) {
+    try {
+      var response = UrlFetchApp.fetch(url, options);
+      if (response.getResponseCode() == 200) {
+        return JSON.parse(response.getContentText());
+      } else {
+        Logger.log('Erro na tentativa ' + (i + 1) + ': ' + response.getResponseCode());
+      }
+    } catch (e) {
+      Logger.log('Erro na tentativa ' + (i + 1) + ': ' + e.message);
+    }
+    Utilities.sleep(2000); // Aguardar 2 segundos antes da próxima tentativa
+  }
+  return null;
+}
+
+
+
+function STEAM_PRICE_SMART(id, tipo, nomeVersao) {
+  
+  var cache = CacheService.getScriptCache();
+  var cacheKey = id + "_" + tipo + "_" + (nomeVersao || "");
+  var cachedData = cache.get(cacheKey);
+  
+  if (cachedData) {
+    return parseFloat(cachedData);
+  }
+
+  var price = null;
+
+  // 🎮 JOGO BASE (appid normal)
+  if (tipo === "jogobase") {
+    price = STEAM_PRICE(id);
+  }
+
+  // 🏷️ VERSÃO (Ultimate / Deluxe / etc dentro do app)
+  else if (tipo === "versao") {
+    price = STEAM_EDITION_PRICE(id, nomeVersao);
+  }
+
+  // 📦 BUNDLE (sub antigo tipo Resident Evil)
+  else if (tipo === "bundle") {
+    var url = 'https://store.steampowered.com/actions/ajaxresolvepackages?packageids=' + id + '&cc=br';
+    var response = UrlFetchApp.fetch(url);
+    var data = JSON.parse(response.getContentText());
+
+    if (data && data[0] && data[0].final_price_cents) {
+      price = data[0].final_price_cents / 100;
+    }
+  }
+
+  // 📦 PACKAGE moderno (caso queira usar)
+  else if (tipo === "package") {
+    var url = 'https://store.steampowered.com/api/packagedetails?packageids=' + id + '&cc=br';
+    var data = safeFetch(url);
+
+    if (data && data[id] && data[id].success && data[id].data.price) {
+      price = data[id].data.price.final / 100;
+    }
+  }
+
+  if (price !== null) {
+    cache.put(cacheKey, price.toString(), 3600);
+    return price;
+  }
+
+  return '#ERROR!';
+}
+
+
+
+function STEAM_EDITION_PRICE(appid, editionName) {
+  
+  var url = 'https://store.steampowered.com/api/appdetails?appids=' + appid + '&cc=br';
+  var data = safeFetch(url);
+
+  if (!data || !data[appid] || !data[appid].success) {
+    return '#ERROR!';
+  }
+
+  var packages = data[appid].data.package_groups;
+
+  if (!packages || packages.length === 0) {
+    return '#NO_EDITIONS';
+  }
+
+  var subs = packages[0].subs;
+
+  for (var i = 0; i < subs.length; i++) {
+    if (subs[i].option_text.toLowerCase().indexOf(editionName.toLowerCase()) !== -1) {
+      return subs[i].price_in_cents_with_discount / 100;
+    }
+  }
+
+  return '#EDITION_NOT_FOUND';
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ====================== ATUALIZAR PREÇO BASE MENSAL - VERSÃO COM ONLYNEW ======================
+function ATUALIZAR_PRECO_BASE_MENSAL(onlyNew = false) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('DescontosSteam');
+  if (!sheet) return SpreadsheetApp.getUi().alert('❌ Aba DescontosSteam não encontrada!');
+
+  const values = sheet.getDataRange().getValues();
+  const LINK_COL = 8;   // I
+  const PRICE_COL = 5;  // F
+
+  const apps = [], subs = [], bundles = [];
+
+  for (let r = 1; r < values.length; r++) {
+    let link = String(values[r][LINK_COL]).trim();
+    if (!link.includes('steampowered.com')) continue;
+
+    link = normalizeUrl(link);
+
+    const current = values[r][PRICE_COL];
+    const hasGoodPrice = typeof current === 'number' && current >= 0;
+
+    if (onlyNew && hasGoodPrice) continue;
+
+    const item = { row: r, link, current };
+
+    if (link.includes('/app/')) apps.push(item);
+    else if (link.includes('/sub/')) subs.push(item);
+    else if (link.includes('/bundle/')) bundles.push(item);
+  }
+
+  if (apps.length + subs.length + bundles.length === 0) {
+    return SpreadsheetApp.getUi().alert(
+      onlyNew 
+        ? '✅ Nenhum jogo NOVO para atualizar preço base.' 
+        : '✅ Nenhum link Steam encontrado.'
+    );
+  }
+
+  const priceMap = new Map();
+  batchProcessApps(apps, priceMap);
+  batchProcessSubs(subs, priceMap);
+  batchProcessBundles(bundles, priceMap);
+
+  const newF = values.map(row => row[PRICE_COL]);
+  let updated = 0;
+
+  [...apps, ...subs, ...bundles].forEach(item => {
+    const newPrice = priceMap.get(item.link);
+    if (newPrice === undefined) return;
+
+    const current = item.current;
+    const isNewNumber = typeof newPrice === 'number';
+    const currentIsNumber = typeof current === 'number';
+
+    if (isNewNumber || !currentIsNumber) {
+      newF[item.row] = newPrice;
+      updated++;
+    }
+  });
+
+  if (updated > 0) {
+    sheet.getRange(1, PRICE_COL + 1, values.length, 1).setValues(newF.map(v => [v]));
+  }
+
+  const modo = onlyNew ? 'APENAS NOVOS' : 'todos';
+  SpreadsheetApp.getUi().alert(
+    `✅ PRONTO!\n\n${updated} preços base atualizados na coluna F (${modo}).\n\n` +
+    `• Preços numéricos sempre atualizam\n` +
+    `• #ERROR_* só preenche se não tinha número antes`
+  );
+}
+
+// ====================== NORMALIZA ======================
+function normalizeUrl(u) { 
+  return String(u).trim().replace(/\/+$/, ''); 
+}
+
+// ====================== BATCHES (com fallback individual) ======================
+function batchProcessApps(list, map) {
+  const CHUNK = 80;
+  for (let i = 0; i < list.length; i += CHUNK) {
+    const chunk = list.slice(i, i + CHUNK);
+    const ids = chunk.map(it => it.link.match(/\/app\/(\d+)/)[1]);
+    const data = safeFetch(`https://store.steampowered.com/api/appdetails?appids=${ids.join(',')}&cc=br&l=brazilian&filters=price_overview`);
+    chunk.forEach((it, idx) => {
+      const id = ids[idx];
+      let p = "#ERROR_APP";
+      if (data && data[id]?.success && data[id].data?.price_overview) p = data[id].data.price_overview.initial / 100;
+      map.set(it.link, p);
+    });
+    Utilities.sleep(1000);
+  }
+}
+
+function batchProcessSubs(list, map) {
+  const CHUNK = 8;
+  for (let i = 0; i < list.length; i += CHUNK) {
+    const chunk = list.slice(i, i + CHUNK);
+    const ids = chunk.map(it => it.link.match(/\/sub\/(\d+)/)[1]);
+    const data = safeFetch(`https://store.steampowered.com/api/packagedetails?packageids=${ids.join(',')}&cc=br`);
+    chunk.forEach((item, idx) => {
+      let p = getPackagePriceRobust(data, ids[idx]);
+      if (p === null) {
+        const single = safeFetch(`https://store.steampowered.com/api/packagedetails?packageids=${ids[idx]}&cc=br`);
+        p = getPackagePriceRobust(single, ids[idx]);
+      }
+      map.set(item.link, p !== null ? p : "#ERROR_PACKAGE");
+    });
+    Utilities.sleep(2000);
+  }
+}
+
+function batchProcessBundles(list, map) {
+  const CHUNK = 25;
+  for (let i = 0; i < list.length; i += CHUNK) {
+    const chunk = list.slice(i, i + CHUNK);
+    const ids = chunk.map(it => it.link.match(/\/bundle\/(\d+)/)[1]);
+    try {
+      const resp = UrlFetchApp.fetch(`https://store.steampowered.com/actions/ajaxresolvebundles?bundleids=${ids.join(',')}&cc=br&l=brazilian`, {muteHttpExceptions: true});
+      if (resp.getResponseCode() === 200) {
+        const d = JSON.parse(resp.getContentText());
+        chunk.forEach((it, idx) => map.set(it.link, getBundlePrice(d[idx]) || "#SEM_PRECO"));
+      }
+    } catch (e) {}
+    Utilities.sleep(1200);
+  }
+}
+
+// ====================== PARSER 100% ROBUSTO ======================
+function getPackagePriceRobust(data, subid) {
+  if (!data) return null;
+  let entry = data[subid] || data.package;
+  if (!entry && typeof data.success !== "undefined") entry = data;
+  if (!entry) {
+    for (let k in data) {
+      if (data[k] && typeof data[k].success !== "undefined") { entry = data[k]; break; }
+    }
+  }
+  if (!entry || !entry.success) return null;
+  const p = entry.price || (entry.data && entry.data.price) || entry.data;
+  if (!p) return null;
+  if (typeof p.initial !== "undefined") return p.initial / 100;
+  if (typeof p.final !== "undefined") return p.final / 100;
+  return null;
+}
+
+function getBundlePrice(item) {
+  if (!item) return null;
+  if (item.formatted_orig_price) return parseFloat(item.formatted_orig_price.replace(/[^0-9,]/g, "").replace(",", "."));
+  if (item.initial_price != null) return Number(item.initial_price) / 100;
+  if (item.formatted_final_price) return parseFloat(item.formatted_final_price.replace(/[^0-9,]/g, "").replace(",", "."));
+  return null;
+}
+
+function safeFetch(url) {
+  try {
+    const r = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
+    return r.getResponseCode() === 200 ? JSON.parse(r.getContentText()) : null;
+  } catch (e) { return null; }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// STEAM CAPTURAR PRECOS AUTO STEAM AUTO
+// ====================== ATUALIZAR PREÇO STEAM ATUAL EM LOTE (VERSÃO 100% ROBUSTA + ONLYNEW) ======================
+function ATUALIZAR_PRECO_STEAM(onlyNew = false) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('DescontosSteam');
+  if (!sheet) return SpreadsheetApp.getUi().alert('❌ Aba "DescontosSteam" não encontrada!');
+
+  const values = sheet.getDataRange().getValues();
+  const formulas = sheet.getDataRange().getFormulas();
+  const LINK_COL = 8; // I
+  const PRICE_COL = 12; // M
+
+  const items = [];
+  for (let r = 1; r < values.length; r++) {
+    let rawLink = String(values[r][LINK_COL]).trim();
+    if (!rawLink.includes('steampowered.com')) continue;
+
+    const normLink = normalizeUrl(rawLink);
+    const idStr = getSteamIdStr(rawLink);
+    if (!idStr) continue;
+
+    // Pega editionName da fórmula antiga (se existir)
+    let editionName = null;
+    const formula = formulas[r][PRICE_COL];
+    if (formula && formula.includes('STEAM_AUTO')) {
+      const match = formula.match(/STEAM_AUTO\s*\(\s*([^,)]+)(?:,\s*([^)]+))?\s*\)/i);
+      if (match && match[2]) {
+        let arg2 = match[2].trim().replace(/^"|"$/g, '');
+        editionName = arg2;
+      }
+    }
+
+    // 🔥 FILTRO ONLYNEW (igual aos outros códigos)
+    const current = values[r][PRICE_COL];
+    const hasGoodPrice = typeof current === 'number' && current >= 0;
+    if (onlyNew && hasGoodPrice) continue;
+
+    items.push({
+      row: r,
+      link: normLink,
+      idStr: idStr,
+      editionName: editionName,
+      current: current
+    });
+  }
+
+  // Nenhum item para processar
+  if (items.length === 0) {
+    return SpreadsheetApp.getUi().alert(
+      onlyNew 
+        ? '✅ Nenhum jogo NOVO para preço Steam atual.' 
+        : '✅ Nenhum link Steam encontrado.'
+    );
+  }
+
+  const priceMap = new Map();
+  const CHUNK_APP = 80;
+  const CHUNK_SUB = 8;
+  const CHUNK_BUNDLE = 25;
+
+  const simpleApps = [];
+  const editionGroups = new Map();
+  const subRequests = [];
+  const bundleItems = [];
+
+  items.forEach(it => {
+    const [type, idNum] = it.idStr.split('/');
+    if (type === 'app') {
+      if (it.editionName) {
+        if (!editionGroups.has(idNum)) editionGroups.set(idNum, []);
+        editionGroups.get(idNum).push({link: it.link, editionName: it.editionName});
+      } else {
+        simpleApps.push({link: it.link});
+      }
+    } else if (type === 'sub') {
+      subRequests.push({subid: idNum, link: it.link});
+    } else if (type === 'bundle') {
+      bundleItems.push({bundleid: idNum, link: it.link});
+    }
+  });
+
+  // 1. Apps simples
+  for (let i = 0; i < simpleApps.length; i += CHUNK_APP) {
+    const chunk = simpleApps.slice(i, i + CHUNK_APP);
+    const ids = chunk.map(it => it.link.match(/\/app\/(\d+)/)[1]);
+    const data = safeFetch(`https://store.steampowered.com/api/appdetails?appids=${ids.join(',')}&cc=br&filters=price_overview`);
+    chunk.forEach((it, idx) => {
+      const id = ids[idx];
+      let p = '#ERROR_APP';
+      if (data && data[id]?.success) {
+        const po = data[id].data?.price_overview;
+        p = (po && po.final != null) ? po.final / 100 : (data[id].data?.is_free ? 0 : '#SEM_PRECO');
+      }
+      priceMap.set(it.link, p);
+    });
+    Utilities.sleep(1000);
+  }
+
+  // 2. Resolver edições → viram subs
+  const editionAppids = Array.from(editionGroups.keys());
+  for (let i = 0; i < editionAppids.length; i += CHUNK_APP) {
+    const chunkAppids = editionAppids.slice(i, i + CHUNK_APP);
+    const data = safeFetch(`https://store.steampowered.com/api/appdetails?appids=${chunkAppids.join(',')}&cc=br`);
+    chunkAppids.forEach(appid => {
+      const appData = data?.[appid];
+      if (!appData?.success || !appData.data?.package_groups?.[0]?.subs) {
+        editionGroups.get(appid).forEach(ed => priceMap.set(ed.link, '#ERROR_APP'));
+        return;
+      }
+      const subs = appData.data.package_groups[0].subs;
+      editionGroups.get(appid).forEach(ed => {
+        const found = subs.find(s => s.option_text && s.option_text.toLowerCase().includes(ed.editionName.toLowerCase()));
+        if (found) {
+          subRequests.push({subid: found.packageid, link: ed.link});
+        } else {
+          const list = subs.map(s => s.option_text || '(sem nome)').join(' | ');
+          priceMap.set(ed.link, `#EDICAO_NAO_ENCONTRADA - Use um destes: ${list}`);
+        }
+      });
+    });
+    Utilities.sleep(1000);
+  }
+
+  // 3. SUBS (com fallback individual)
+  for (let i = 0; i < subRequests.length; i += CHUNK_SUB) {
+    const chunk = subRequests.slice(i, i + CHUNK_SUB);
+    const ids = chunk.map(req => req.subid);
+    let data = safeFetch(`https://store.steampowered.com/api/packagedetails?packageids=${ids.join(',')}&cc=br`);
+    chunk.forEach((req, idx) => {
+      let p = getPackagePriceRobust(data, ids[idx]);
+      if (p === null) {
+        const singleData = safeFetch(`https://store.steampowered.com/api/packagedetails?packageids=${ids[idx]}&cc=br`);
+        p = getPackagePriceRobust(singleData, ids[idx]);
+      }
+      priceMap.set(req.link, p !== null ? p : '#ERROR_PACKAGE');
+    });
+    Utilities.sleep(2000);
+  }
+
+  // 4. Bundles
+  for (let i = 0; i < bundleItems.length; i += CHUNK_BUNDLE) {
+    const chunk = bundleItems.slice(i, i + CHUNK_BUNDLE);
+    const ids = chunk.map(it => it.bundleid);
+    try {
+      const resp = UrlFetchApp.fetch(
+        `https://store.steampowered.com/actions/ajaxresolvebundles?bundleids=${ids.join(',')}&cc=br&l=brazilian`,
+        { muteHttpExceptions: true }
+      );
+      if (resp.getResponseCode() === 200) {
+        const d = JSON.parse(resp.getContentText());
+        chunk.forEach((it, idx) => {
+          const item = d[idx];
+          let p = '#ERROR_BUNDLE';
+          if (item?.final_price_cents != null) p = item.final_price_cents / 100;
+          else if (item?.formatted_final_price) {
+            const priceStr = item.formatted_final_price.replace(/[^0-9.,]/g, '').replace(',', '.');
+            p = parseFloat(priceStr) || '#ERROR_BUNDLE';
+          }
+          priceMap.set(it.link, p);
+        });
+      }
+    } catch (e) {}
+    Utilities.sleep(1200);
+  }
+
+  // ====================== ESCREVE NA COLUNA M ======================
+  const newM = values.map((row, idx) => {
+    if (idx === 0) return row[PRICE_COL];
+    const rawLink = String(row[LINK_COL]).trim();
+    if (!rawLink.includes('steampowered.com')) return row[PRICE_COL];
+    const normLink = normalizeUrl(rawLink);
+    return priceMap.get(normLink) !== undefined ? priceMap.get(normLink) : row[PRICE_COL];
+  });
+
+  sheet.getRange(1, 13, newM.length, 1).setValues(newM.map(v => [v]));
+
+  let updated = 0;
+  for (let i = 1; i < newM.length; i++) {
+    if (newM[i] !== values[i][PRICE_COL]) updated++;
+  }
+
+  const modo = onlyNew ? 'APENAS NOVOS' : 'todos';
+  SpreadsheetApp.getUi().alert(
+    `✅ PRONTO!\n\n` +
+    `${updated} preços Steam atualizados na coluna M (${modo}).\n\n` +
+    `• The Witcher 3 Complete, RE Revelations 2, Cities Skylines Ultimate etc. agora funcionam\n` +
+    `• Fallback individual ativado para subs problemáticos\n` +
+    `• Mesma lógica do seu STEAM_AUTO antigo + batch seguro`
+  );
+}
+
+// ====================== PARSER ROBUSTO PARA SUBS ======================
+function getPackagePriceRobust(data, subid) {
+  if (!data) return null;
+  let entry = data[subid] || data.package;
+  if (!entry && typeof data.success !== "undefined") entry = data;
+  if (!entry) {
+    for (let k in data) {
+      if (data[k] && typeof data[k].success !== "undefined") {
+        entry = data[k];
+        break;
+      }
+    }
+  }
+  if (!entry || !entry.success) return null;
+  const p = entry.price || (entry.data && entry.data.price) || entry.data;
+  if (!p) return null;
+  if (typeof p.final !== "undefined") return p.final / 100;
+  if (typeof p.initial !== "undefined") return p.initial / 100;
+  return null;
+}
+
+// ====================== AUXILIARES ======================
+function normalizeUrl(u) { return String(u).trim().replace(/\/+$/, ''); }
+
+function getSteamIdStr(url) {
+  if (!url) return null;
+  url = normalizeUrl(url);
+  const appMatch = url.match(/\/app\/(\d+)/i);
+  if (appMatch) return 'app/' + appMatch[1];
+  const subMatch = url.match(/\/sub\/(\d+)/i);
+  if (subMatch) return 'sub/' + subMatch[1];
+  const bundleMatch = url.match(/\/bundle\/(\d+)/i);
+  if (bundleMatch) return 'bundle/' + bundleMatch[1];
+  return null;
+}
+
+function safeFetch(url) {
+  try {
+    const r = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
+    return r.getResponseCode() === 200 ? JSON.parse(r.getContentText()) : null;
+  } catch (e) { return null; }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+const ITAD_API_KEY = '779dc1736f75bf6ce3d14153ca9feff6a271ca0f';
+
+// ====================== 1. ATUALIZAR URL NUUVEM (Coluna R) ======================
+function ATUALIZAR_URL_NUUVEM(onlyNew = false) {
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('DescontosSteam');
+  if (!sheet) return SpreadsheetApp.getUi().alert('❌ Aba "DescontosSteam" não encontrada!');
+
+  const lastRow = sheet.getLastRow();
+  const values = sheet.getRange(1, 1, lastRow, 18).getValues();
+
+  const LINK_COL = 8; 
+  const NUUVEM_COL = 17;
+
+  const items = [];
+
+  for (let r = 1; r < values.length; r++) {
+    let rawLink = String(values[r][LINK_COL]).trim();
+    if (!rawLink.includes('steampowered.com')) continue;
+
+    const idStr = getSteamIdStr(rawLink);
+    if (!idStr) continue;
+
+    const normLink = normalizeUrl(rawLink);
+    const current = values[r][NUUVEM_COL];
+
+    if (onlyNew && typeof current === 'string' && current.startsWith('https://')) continue;
+
+    items.push({ row: r, link: normLink, idStr: idStr });
+  }
+
+  if (items.length === 0) {
+    return SpreadsheetApp.getUi().alert(
+      onlyNew ? '✅ Nenhum jogo NOVO para atualizar URL.' : '✅ Nenhum link Steam encontrado.'
+    );
+  }
+
+  const nuuvemMap = new Map();
+  const CHUNK = 120;
+
+  for (let i = 0; i < items.length; i += CHUNK) {
+
+    const chunk = items.slice(i, i + CHUNK);
+    const idStrs = chunk.map(it => it.idStr);
+
+    let uuidMap = {};
+
+    try {
+      const resp = UrlFetchApp.fetch(
+        'https://api.isthereanydeal.com/lookup/id/shop/61/v1',
+        {
+          method: 'post',
+          contentType: 'application/json',
+          payload: JSON.stringify(idStrs),
+          muteHttpExceptions: true
+        }
+      );
+      if (resp.getResponseCode() === 200) {
+        uuidMap = JSON.parse(resp.getContentText());
+      }
+    } catch (e) {}
+
+    const uuidToItem = new Map();
+    const uuidsForStore = [];
+
+    chunk.forEach(it => {
+      const uuid = uuidMap[it.idStr];
+      if (uuid) {
+        uuidsForStore.push(uuid);
+        uuidToItem.set(uuid, it);
+      } else {
+        nuuvemMap.set(it.link, '#NAO_ENCONTRADO_ITAD');
+      }
+    });
+
+    if (uuidsForStore.length === 0) continue;
+
+    let data = null;
+
+    try {
+      const resp = UrlFetchApp.fetch(
+        `https://api.isthereanydeal.com/games/prices/v3?key=${ITAD_API_KEY}&shops=50,61&country=BR&vouchers=true`,
+        {
+          method: 'post',
+          contentType: 'application/json',
+          payload: JSON.stringify(uuidsForStore),
+          muteHttpExceptions: true
+        }
+      );
+      if (resp.getResponseCode() === 200) {
+        data = JSON.parse(resp.getContentText());
+      }
+    } catch (e) {}
+
+    if (!data) {
+      uuidsForStore.forEach(uuid => {
+        const it = uuidToItem.get(uuid);
+        if (it) nuuvemMap.set(it.link, '#STORELINK_ERROR');
+      });
+      continue;
+    }
+
+    data.forEach(entry => {
+
+      const uuid = entry.id;
+      const it = uuidToItem.get(uuid);
+      if (!it) return;
+
+      const steamDeal = entry.deals.find(d => d.shop?.id === 61);
+      let nuuvemDeal = entry.deals.find(
+        d => d.shop?.id === 50 && d.drm.some(dr => dr.name.toLowerCase() === 'steam')
+      );
+
+      if (!nuuvemDeal) {
+        nuuvemDeal = entry.deals.find(d => d.shop?.id === 50);
+      }
+
+      let finalUrl;
+
+      if (nuuvemDeal && nuuvemDeal.url) {
+        finalUrl = nuuvemDeal.url;
+      } else if (!steamDeal) {
+        finalUrl = '#REMOVIDO_STEAM';
+      } else {
+        finalUrl = '#SEM_LINK_NUUVEM';
+      }
+
+      nuuvemMap.set(it.link, finalUrl);
+    });
+  }
+
+  const newR = values.map((row, idx) => {
+    if (idx === 0) return row[NUUVEM_COL];
+    const rawLink = String(row[LINK_COL]).trim();
+    if (!rawLink.includes('steampowered.com')) return row[NUUVEM_COL];
+    const normLink = normalizeUrl(rawLink);
+    return nuuvemMap.get(normLink) || row[NUUVEM_COL];
+  });
+
+  sheet.getRange(1, 18, newR.length, 1).setValues(newR.map(v => [v]));
+
+  let updated = 0;
+  for (let i = 1; i < newR.length; i++) {
+    if (newR[i] !== values[i][NUUVEM_COL]) updated++;
+  }
+
+  SpreadsheetApp.getUi().alert(
+    `✅ URL Nuuvem: ${updated} linhas atualizadas (${onlyNew ? 'APENAS NOVOS' : 'todos'})`
+  );
+}
+
+
+
+
+// ====================== 2. ATUALIZAR PREÇO NUUVEM (Coluna Q) ======================
+function ATUALIZAR_PRECO_NUUVEM(onlyNew = false) {
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('DescontosSteam');
+  if (!sheet) return SpreadsheetApp.getUi().alert('❌ Aba "DescontosSteam" não encontrada!');
+
+  const lastRow = sheet.getLastRow();
+  const values = sheet.getRange(1, 1, lastRow, 17).getValues();
+
+  const LINK_COL = 8;
+  const PRECO_COL = 16;
+
+  const items = [];
+
+  for (let r = 1; r < values.length; r++) {
+
+    let rawLink = String(values[r][LINK_COL]).trim();
+    if (!rawLink.includes('steampowered.com')) continue;
+
+    const idStr = getSteamIdStr(rawLink);
+    if (!idStr) continue;
+
+    const normLink = normalizeUrl(rawLink);
+    const currentPrice = values[r][PRECO_COL];
+
+    const hasGoodPrice = typeof currentPrice === 'number' && currentPrice >= 0;
+    if (onlyNew && hasGoodPrice) continue;
+
+    items.push({ row: r, link: normLink, idStr: idStr });
+  }
+
+  if (items.length === 0) {
+    return SpreadsheetApp.getUi().alert(
+      onlyNew ? '✅ Nenhum jogo NOVO para preço Nuuvem.' : '✅ Nenhum link Steam encontrado.'
+    );
+  }
+
+  const priceMap = new Map();
+  const CHUNK = 120;
+
+  for (let i = 0; i < items.length; i += CHUNK) {
+
+    const chunk = items.slice(i, i + CHUNK);
+    const idStrs = chunk.map(it => it.idStr);
+
+    let uuidMap = {};
+
+    try {
+      const resp = UrlFetchApp.fetch(
+        'https://api.isthereanydeal.com/lookup/id/shop/61/v1',
+        {
+          method: 'post',
+          contentType: 'application/json',
+          payload: JSON.stringify(idStrs),
+          muteHttpExceptions: true
+        }
+      );
+      if (resp.getResponseCode() === 200) {
+        uuidMap = JSON.parse(resp.getContentText());
+      }
+    } catch (e) {}
+
+    const uuidToItem = new Map();
+    const uuidsForPrice = [];
+
+    chunk.forEach(it => {
+      const uuid = uuidMap[it.idStr];
+      if (uuid) {
+        uuidsForPrice.push(uuid);
+        uuidToItem.set(uuid, it);
+      } else {
+        priceMap.set(it.link, '#NAO_ENCONTRADO_ITAD');
+      }
+    });
+
+    if (uuidsForPrice.length === 0) continue;
+
+    let data = null;
+
+    try {
+      const resp = UrlFetchApp.fetch(
+        `https://api.isthereanydeal.com/games/prices/v3?key=${ITAD_API_KEY}&shops=50,61&country=BR&vouchers=true`,
+        {
+          method: 'post',
+          contentType: 'application/json',
+          payload: JSON.stringify(uuidsForPrice),
+          muteHttpExceptions: true
+        }
+      );
+      if (resp.getResponseCode() === 200) {
+        data = JSON.parse(resp.getContentText());
+      }
+    } catch (e) {}
+
+    if (!data) {
+      uuidsForPrice.forEach(uuid => {
+        const it = uuidToItem.get(uuid);
+        if (it) priceMap.set(it.link, '#PRECO_ERROR');
+      });
+      continue;
+    }
+
+    data.forEach(entry => {
+
+      const uuid = entry.id;
+      const it = uuidToItem.get(uuid);
+      if (!it) return;
+
+      const steamDeal = entry.deals.find(d => d.shop?.id === 61);
+      let nuuvemDeal = entry.deals.find(
+        d => d.shop?.id === 50 && d.drm.some(dr => dr.name.toLowerCase() === 'steam')
+      );
+
+      let isSteamDrm = !!nuuvemDeal;
+
+      if (!nuuvemDeal) {
+        nuuvemDeal = entry.deals.find(d => d.shop?.id === 50);
+      }
+
+      let price;
+
+      if (nuuvemDeal) {
+        if (isSteamDrm) {
+          price = !steamDeal ? 'Sem Steam' : nuuvemDeal.price.amount;
+        } else {
+          price = '#SEM_STEAM';
+        }
+      } else if (!steamDeal) {
+        price = '#REMOVIDO_STEAM';
+      } else {
+        price = 'Indisponivel';
+      }
+
+      priceMap.set(it.link, price);
+    });
+  }
+
+  const newQ = values.map((row, idx) => {
+    if (idx === 0) return row[PRECO_COL];
+    const rawLink = String(row[LINK_COL]).trim();
+    if (!rawLink.includes('steampowered.com')) return row[PRECO_COL];
+    const normLink = normalizeUrl(rawLink);
+    return priceMap.get(normLink) !== undefined
+      ? priceMap.get(normLink)
+      : row[PRECO_COL];
+  });
+
+  sheet.getRange(1, 17, newQ.length, 1).setValues(newQ.map(v => [v]));
+
+  let updated = 0;
+  for (let i = 1; i < newQ.length; i++) {
+    if (newQ[i] !== values[i][PRECO_COL]) updated++;
+  }
+
+  SpreadsheetApp.getUi().alert(
+    `✅ Preço Nuuvem: ${updated} linhas atualizadas (${onlyNew ? 'APENAS NOVOS' : 'todos'})`
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ====================== 4. BOTÃO ÚNICO – Atualizar Novos Jogos ======================
+function ATUALIZAR_NOVOS_JOGOS() {
+  const ui = SpreadsheetApp.getUi();
+  ui.alert('🚀 Iniciando atualização APENAS dos jogos novos (M, Q e R)...');
+
+  ATUALIZAR_URL_NUUVEM(true);
+  ATUALIZAR_PRECO_NUUVEM(true);
+  ATUALIZAR_PRECO_STEAM(true);
+  ATUALIZAR_PRECO_BASE_MENSAL(true);
+  ATUALIZAR_IMAGENS();
+
+
+  ui.alert('✅ PRONTO!\n\nTodos os campos dos jogos novos foram atualizados!');
+}
+
+
+
+
+
+
+
+
+function IMPORTAR_SUGESTOES() {
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sugestoes = ss.getSheetByName('Sugestoes');
+  const principal = ss.getSheetByName('DescontosSteam');
+
+  if (!sugestoes || !principal) {
+    SpreadsheetApp.getUi().alert("❌ Aba Sugestoes ou DescontosSteam não encontrada.");
+    return;
+  }
+
+  const sugLastRow = sugestoes.getLastRow();
+  const mainLastRow = principal.getLastRow();
+
+  if (sugLastRow < 2) {
+    SpreadsheetApp.getUi().alert("⚠️ Nenhuma sugestão para importar.");
+    return;
+  }
+
+  const sugData = sugestoes.getRange(2,1,sugLastRow-1,4).getValues();
+  const mainData = mainLastRow >= 3 
+    ? principal.getRange(3,9,mainLastRow-2,1).getValues() // SOMENTE COLUNA I (URL)
+    : [];
+
+  const COL_NOME_SUG = 1; // B
+  const COL_URL_SUG  = 2; // C
+  const COL_STATUS   = 3; // D
+
+  // Regex universal Steam
+  const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
+
+  // ============================
+  // PEGAR IDs EXISTENTES DA COLUNA I
+  // ============================
+
+  const existingIDs = new Set();
+
+  mainData.forEach(row => {
+    const url = row[0];
+    if (!url) return;
+
+    const match = String(url).match(steamRegex);
+    if (match) {
+      existingIDs.add(match[2]);
+    }
+  });
+
+  let adicionados = 0;
+  let jaExistiam = 0;
+  let invalidos = 0;
+
+  for (let i = 0; i < sugData.length; i++) {
+
+    const nome = sugData[i][COL_NOME_SUG];
+    const url  = sugData[i][COL_URL_SUG];
+    const status = sugData[i][COL_STATUS];
+
+    if (status) continue;
+    if (!nome || !url) continue;
+
+    const match = String(url).match(steamRegex);
+
+    if (!match) {
+      sugestoes.getRange(i+2,4).setValue("URL Inválida");
+      invalidos++;
+      continue;
+    }
+
+    const tipo = match[1].toLowerCase();
+    const id = match[2].trim();
+
+    const urlFinal = `https://store.steampowered.com/${tipo}/${id}`;
+
+    // 🔥 BLOQUEIA PELO ID DA URL
+    if (existingIDs.has(id)) {
+      sugestoes.getRange(i+2,4).setValue("Já Cadastrado");
+      jaExistiam++;
+      continue;
+    }
+
+    // ============================
+    // PROCURAR LINHA VAGA (COLUNA C)
+    // ============================
+
+    let linhaVaga = -1;
+
+    if (mainLastRow >= 3) {
+      const colCValues = principal.getRange(3, 3, mainLastRow - 2, 1).getValues();
+
+      for (let r = 0; r < colCValues.length; r++) {
+        if (!colCValues[r][0]) {
+          linhaVaga = r + 3;
+          break;
+        }
+      }
+    }
+
+    if (linhaVaga !== -1) {
+
+      principal.getRange(linhaVaga, 3).setValue(nome);      // C
+      principal.getRange(linhaVaga, 9).setValue(urlFinal);  // I
+
+    } else {
+
+      principal.appendRow([
+        "", "", nome, "", "", "", "", "",
+        urlFinal
+      ]);
+    }
+
+    existingIDs.add(id);
+    sugestoes.getRange(i+2,4).setValue("Importado");
+    adicionados++;
+  }
+
+  SpreadsheetApp.getUi().alert(
+    `✅ ${adicionados} importados\n` +
+    `🔁 ${jaExistiam} já cadastrados\n` +
+    `⚠️ ${invalidos} inválidos`
+  );
+}
+
+
+
+Enviar msg telegram.gs
+// ==================== CONFIGURAÇÕES ====================
+const botToken = '7089115139:AAFJ5qT-yB7ASsM9KOdxDuONMGEGJ_7OSxs';
+const sheetId = "11CFj3_EuhBT0qrT5PtLeOddd8T46VBRprMbto9s2OyI";
+const googleWebAppURL = 'https://script.google.com/macros/s/AKfycbx4mmedpjjr3iB_avpGV89Zr7vEIaE8sVugDcOqN5hpWoKaPyvQWp7esZIyLey_QFNk/exec';
+const channelChatId = '@betasteampromo';
+const discordWebhookUrl = 'https://discord.com/api/webhooks/1476871451415154839/4YjlifRgub-UF_4gnirBYrCuqtX9QN9UxAwVhUKO6PYtOL1F-9XTIsAOyAnykc2SgB2l';
+
+// ==================== FUNÇÕES AUXILIARES ====================
+function toNumber(val) {
+  if (typeof val === 'number') return val;
+  if (typeof val !== 'string' || !val) return 0;
+  let clean = val.replace(/R\$\s*| /gi, '').trim().replace(',', '.');
+  return parseFloat(clean) || 0;
+}
+
+function setWebhook() {
+  const url = 'https://api.telegram.org/bot' + botToken + '/setWebhook?url=' + googleWebAppURL;
+  const response = UrlFetchApp.fetch(url);
+  console.log(response.getContentText());
+}
+
+function doPost(e) {
+  const data = JSON.parse(e.postData.contents);
+  const sheet = SpreadsheetApp.openById(sheetId).getSheets()[0];
+  sheet.appendRow([new Date(), JSON.stringify(data), data.message.text]);
+
+  const respostaDoRobo = 'Olá, recebi a sua mensagem:\n\n ' + data.message.text;
+
+  const url = 'https://api.telegram.org/bot' + botToken + '/sendMessage?chat_id=' + 
+    data.message.chat.id + 
+    '&text=' + encodeURIComponent(respostaDoRobo);
+
+  const options = {
+    method: 'post',
+    contentType: 'application/x-www-form-urlencoded',
+  };
+
+  const response = UrlFetchApp.fetch(url, options);
+  console.log(response.getContentText());
+}
+
+// ==================== ENVIO PARA TELEGRAM ====================
+function sendTelegramMessageWithPhoto(
+  chatId,
+  photoUrl,
+  gameName,
+  steamUrl,
+  nuuvemUrl,
+  steamPrice,
+  nuuvemPrice,
+  cachedLowPrice,
+  cachedLowPrice2Years,
+  dateCachedLowPrice2Years,
+  dateCachedAbsoluteLowPrice
+) {
+
+  const boldGameName = `<b>${gameName}</b>`;
+
+  const priceDifferenceThreshold = 0.10;
+
+  let hasSteam = steamPrice > 0 && steamUrl && steamUrl.toString().trim() !== '';
+  let hasNuuvem = nuuvemPrice > 0 && nuuvemUrl && typeof nuuvemUrl === 'string' && nuuvemUrl.trim().startsWith('http');
+
+  if (hasSteam && hasNuuvem) {
+    const minPrice = Math.min(steamPrice, nuuvemPrice);
+    const maxPrice = Math.max(steamPrice, nuuvemPrice);
+    const differenceRatio = (maxPrice - minPrice) / minPrice;
+
+    if (differenceRatio > priceDifferenceThreshold) {
+      if (steamPrice < nuuvemPrice) {
+        hasNuuvem = false;
+      } else {
+        hasSteam = false;
+      }
+    }
+  }
+
+  const previousLowFormatted =
+    (!isNaN(cachedLowPrice) && cachedLowPrice > 0)
+      ? `R$ ${cachedLowPrice.toFixed(2).replace('.', ',')}`
+      : '';
+
+  const dateAbsObj = new Date(dateCachedAbsoluteLowPrice);
+  const date2yObj = new Date(dateCachedLowPrice2Years);
+  const twoYearsAgo = new Date(date2yObj);
+  twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+
+  let twoYearsLine = '';
+
+  if (
+    !isNaN(cachedLowPrice2Years) &&
+    cachedLowPrice2Years !== 0 &&
+    cachedLowPrice2Years > cachedLowPrice
+  ) {
+    if (!isNaN(dateAbsObj.getTime()) && dateAbsObj <= twoYearsAgo) {
+      twoYearsLine = `Menor valor nos últimos 2 anos: R$ ${cachedLowPrice2Years
+        .toFixed(2)
+        .replace('.', ',')}`;
+    }
+  }
+
+  const currentCheapest =
+    hasSteam && hasNuuvem
+      ? Math.min(steamPrice, nuuvemPrice)
+      : hasSteam
+      ? steamPrice
+      : nuuvemPrice;
+
+  const isStrictNewLow =
+    !isNaN(cachedLowPrice) &&
+    cachedLowPrice > 0 &&
+    currentCheapest < cachedLowPrice;
+
+  const isEqualHistorical =
+    !isNaN(cachedLowPrice) &&
+    cachedLowPrice > 0 &&
+    Math.abs(currentCheapest - cachedLowPrice) < 0.01;
+
+  const isBestHistorical = isStrictNewLow || isEqualHistorical;
+
+  let lines = [];
+
+  if (isBestHistorical) {
+    lines.push(
+      isStrictNewLow
+        ? `${boldGameName} NO SEU MELHOR HISTÓRICO!`
+        : `${boldGameName} em promo no seu melhor preço!`
+    );
+  } else if (hasSteam && hasNuuvem) {
+    lines.push(`${boldGameName} em promoção!`);
+  } else if (hasNuuvem) {
+    lines.push(`${boldGameName} em promoção na Nuuvem!`);
+  } else if (hasSteam) {
+    lines.push(`${boldGameName} em promoção na Steam!`);
+  }
+
+  const thresholdPercentage = 0.08;
+
+  const lowPriceThreshold =
+    !isNaN(cachedLowPrice) && cachedLowPrice > 0
+      ? cachedLowPrice * (1 + thresholdPercentage)
+      : Infinity;
+
+  const lowPrice2YearsThreshold =
+    !isNaN(cachedLowPrice2Years) && cachedLowPrice2Years > 0
+      ? cachedLowPrice2Years * (1 + thresholdPercentage)
+      : Infinity;
+
+  const isSteamHot =
+    hasSteam &&
+    (steamPrice <= lowPriceThreshold ||
+      steamPrice <= lowPrice2YearsThreshold);
+
+  const isNuuvemHot =
+    hasNuuvem &&
+    (nuuvemPrice <= lowPriceThreshold ||
+      nuuvemPrice <= lowPrice2YearsThreshold);
+
+  if (hasSteam) {
+    const fire = isSteamHot ? ' 🔥' : '';
+    lines.push(
+      `<a href="${steamUrl}">Steam</a> → R$ ${steamPrice
+        .toFixed(2)
+        .replace('.', ',')}${fire}`
+    );
+  }
+
+  if (hasNuuvem) {
+    const fire = isNuuvemHot ? ' 🔥' : '';
+    lines.push(
+      `<a href="${nuuvemUrl}">Nuuvem</a> → R$ ${nuuvemPrice
+        .toFixed(2)
+        .replace('.', ',')}${fire}`
+    );
+  }
+
+  if (previousLowFormatted) {
+    const lowText = isStrictNewLow
+      ? `Menor histórico anterior: ${previousLowFormatted}`
+      : `Menor histórico: ${previousLowFormatted}`;
+    lines.push(lowText);
+  }
+
+  if (twoYearsLine) lines.push(twoYearsLine);
+
+  const caption = lines.join('\n');
+
+  const apiUrl = 'https://api.telegram.org/bot' + botToken + '/sendPhoto';
+
+  const options = {
+    method: 'post',
+    payload: {
+      chat_id: String(chatId),
+      photo: photoUrl,
+      caption: caption,
+      parse_mode: 'HTML'
+    },
+    muteHttpExceptions: true
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(apiUrl, options);
+    const responseCode = response.getResponseCode();
+
+    if (responseCode === 429) {
+      const retryAfter = JSON.parse(response.getContentText()).parameters.retry_after;
+      Utilities.sleep(retryAfter * 1000);
+      sendTelegramMessageWithPhoto(
+        chatId,
+        photoUrl,
+        gameName,
+        steamUrl,
+        nuuvemUrl,
+        steamPrice,
+        nuuvemPrice,
+        cachedLowPrice,
+        cachedLowPrice2Years,
+        dateCachedLowPrice2Years,
+        dateCachedAbsoluteLowPrice
+      );
+    } else {
+      console.log(response.getContentText());
+    }
+  } catch (e) {
+    console.error('Erro ao enviar a mensagem para Telegram:', e.message);
+  }
+}
+
+// ==================== ENVIO PARA DISCORD ====================
+function sendDiscordMessage(
+  webhookUrl,
+  gameName,
+  steamUrl,
+  nuuvemUrl,
+  steamPrice,
+  nuuvemPrice,
+  cachedLowPrice,
+  cachedLowPrice2Years,
+  dateCachedLowPrice2Years,
+  dateCachedAbsoluteLowPrice,
+  imageUrl
+) {
+  // Mesma lógica de formatação usada no Telegram, mas adaptada para Markdown/Embed
+
+  const priceDifferenceThreshold = 0.10;
+
+  let hasSteam = steamPrice > 0 && steamUrl && steamUrl.toString().trim() !== '';
+  let hasNuuvem = nuuvemPrice > 0 && nuuvemUrl && typeof nuuvemUrl === 'string' && nuuvemUrl.trim().startsWith('http');
+
+  if (hasSteam && hasNuuvem) {
+    const minPrice = Math.min(steamPrice, nuuvemPrice);
+    const maxPrice = Math.max(steamPrice, nuuvemPrice);
+    const differenceRatio = (maxPrice - minPrice) / minPrice;
+
+    if (differenceRatio > priceDifferenceThreshold) {
+      if (steamPrice < nuuvemPrice) {
+        hasNuuvem = false;
+      } else {
+        hasSteam = false;
+      }
+    }
+  }
+
+  const previousLowFormatted =
+    (!isNaN(cachedLowPrice) && cachedLowPrice > 0)
+      ? `R$ ${cachedLowPrice.toFixed(2).replace('.', ',')}`
+      : '';
+
+  const dateAbsObj = new Date(dateCachedAbsoluteLowPrice);
+  const date2yObj = new Date(dateCachedLowPrice2Years);
+  const twoYearsAgo = new Date(date2yObj);
+  twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+
+  let twoYearsLine = '';
+
+  if (
+    !isNaN(cachedLowPrice2Years) &&
+    cachedLowPrice2Years !== 0 &&
+    cachedLowPrice2Years > cachedLowPrice
+  ) {
+    if (!isNaN(dateAbsObj.getTime()) && dateAbsObj <= twoYearsAgo) {
+      twoYearsLine = `Menor valor nos últimos 2 anos: R$ ${cachedLowPrice2Years
+        .toFixed(2)
+        .replace('.', ',')}`;
+    }
+  }
+
+  const currentCheapest =
+    hasSteam && hasNuuvem
+      ? Math.min(steamPrice, nuuvemPrice)
+      : hasSteam
+      ? steamPrice
+      : nuuvemPrice;
+
+  const isStrictNewLow =
+    !isNaN(cachedLowPrice) &&
+    cachedLowPrice > 0 &&
+    currentCheapest < cachedLowPrice;
+
+  const isEqualHistorical =
+    !isNaN(cachedLowPrice) &&
+    cachedLowPrice > 0 &&
+    Math.abs(currentCheapest - cachedLowPrice) < 0.01;
+
+  const isBestHistorical = isStrictNewLow || isEqualHistorical;
+
+  // Construir título do embed alinhado com Telegram
+  let title = `**${gameName}**`;
+  if (isBestHistorical) {
+    title += isStrictNewLow ? ' NO SEU MELHOR HISTÓRICO!' : ' em promo no seu melhor preço!';
+  } else if (hasSteam && hasNuuvem) {
+    title += ' em promoção!';
+  } else if (hasNuuvem) {
+    title += ' em promoção na Nuuvem!';
+  } else if (hasSteam) {
+    title += ' em promoção na Steam!';
+  }
+
+  const thresholdPercentage = 0.08;
+
+  const lowPriceThreshold =
+    !isNaN(cachedLowPrice) && cachedLowPrice > 0
+      ? cachedLowPrice * (1 + thresholdPercentage)
+      : Infinity;
+
+  const lowPrice2YearsThreshold =
+    !isNaN(cachedLowPrice2Years) && cachedLowPrice2Years > 0
+      ? cachedLowPrice2Years * (1 + thresholdPercentage)
+      : Infinity;
+
+  const isSteamHot =
+    hasSteam &&
+    (steamPrice <= lowPriceThreshold ||
+      steamPrice <= lowPrice2YearsThreshold);
+
+  const isNuuvemHot =
+    hasNuuvem &&
+    (nuuvemPrice <= lowPriceThreshold ||
+      nuuvemPrice <= lowPrice2YearsThreshold);
+
+  // Descrição do embed (campos em texto, sem símbolos extras)
+  let description = '';
+
+  if (hasSteam) {
+    const fire = isSteamHot ? '  🔥' : '';
+    description += `**[Steam](${steamUrl})** → R$ ${steamPrice.toFixed(2).replace('.', ',')}${fire}\n`;
+  }
+
+  if (hasNuuvem) {
+    const fire = isNuuvemHot ? '  🔥' : '';
+    description += `**[Nuuvem](${nuuvemUrl})** → R$ ${nuuvemPrice.toFixed(2).replace('.', ',')}${fire}\n`;
+  }
+
+  if (previousLowFormatted) {
+    const lowText = isStrictNewLow
+      ? `Menor histórico anterior: ${previousLowFormatted}`
+      : `Menor histórico: ${previousLowFormatted}`;
+    description += `\n${lowText}`;
+  }
+
+  if (twoYearsLine) {
+    description += `\n${twoYearsLine}`;
+  }
+
+  // Cor do embed (verde se for melhor histórico, laranja se for promo comum)
+  let color = 0x00ff00; // verde
+  if (!isBestHistorical) color = 0xffa500; // laranja
+
+  const payload = {
+    embeds: [{
+      title: title,
+      description: description,
+      color: color,
+      image: { url: imageUrl },
+
+
+    }]
+  };
+
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(webhookUrl, options);
+    const responseCode = response.getResponseCode();
+    if (responseCode === 429) {
+      // Rate limit: esperar e tentar novamente
+      const retryAfter = JSON.parse(response.getContentText()).retry_after || 5;
+      Utilities.sleep(retryAfter * 1000);
+      sendDiscordMessage(webhookUrl, gameName, steamUrl, nuuvemUrl, steamPrice, nuuvemPrice,
+                         cachedLowPrice, cachedLowPrice2Years, dateCachedLowPrice2Years,
+                         dateCachedAbsoluteLowPrice, imageUrl);
+    } else if (responseCode !== 204) {
+      console.log('Discord response:', response.getContentText());
+    }
+  } catch (e) {
+    console.error('Erro ao enviar para Discord:', e.message);
+  }
+}
+
+// ==================== FUNÇÃO PRINCIPAL DE VERIFICAÇÃO ====================
+function checkAndSendTelegramMessage() {
+
+  const ss = SpreadsheetApp.openById(sheetId);
+  const sheet = ss.getSheetByName('DescontosSteam');
+  const priceCacheSheet = ss.getSheetByName('PriceCache');
+
+  const data = sheet.getDataRange().getValues();
+  const formulas = sheet.getDataRange().getFormulas();
+
+  const cacheLastRow = priceCacheSheet.getLastRow();
+  const cacheData = cacheLastRow > 1
+    ? priceCacheSheet.getRange(2, 1, cacheLastRow - 1, 8).getValues()
+    : [];
+
+  const now = new Date();
+  const formattedDate = Utilities.formatDate(now, Session.getScriptTimeZone(), "MM/dd/yyyy");
+  const notificationCooldownDays = 30;
+
+  for (let row = 2; row < data.length; row++) {
+
+    if (data[row][14] !== '✅') continue; // coluna 15
+
+    const gameName = data[row][2];        // coluna 3
+    const steamAppId = data[row][9];      // coluna 10
+    const steamUrl = data[row][8];        // coluna 9
+    const nuuvemUrl = data[row][17];      // coluna 18
+
+    const steamPriceNum = toNumber(data[row][12]); // coluna 13
+    const nuuvemPriceNum = toNumber(data[row][16]); // coluna 17
+
+    const validSteam = steamPriceNum > 0 && steamUrl;
+    const validNuuvem = nuuvemPriceNum > 0 && nuuvemUrl;
+
+    if (!validSteam && !validNuuvem) continue;
+
+    // ================= IMAGEM =================
+
+    let imageUrl = '';
+    const imageFormula = formulas[row][1]; // coluna B
+
+    if (imageFormula && imageFormula.startsWith('=IMAGE("')) {
+      imageUrl = imageFormula.match(/=IMAGE\("([^"]+)"\)/)?.[1] || '';
+    }
+
+    // Fallback inteligente se estiver vazia
+    if (!imageUrl && steamAppId) {
+      imageUrl = `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${steamAppId}/header.jpg`;
+    }
+
+    // Se ainda estiver vazio, envia sem imagem
+    const sendWithoutImage = !imageUrl;
+
+    // ================= PREÇO MAIS BARATO =================
+
+    let cheapestPriceNum;
+    if (validSteam && validNuuvem) {
+      cheapestPriceNum = Math.min(steamPriceNum, nuuvemPriceNum);
+    } else if (validSteam) {
+      cheapestPriceNum = steamPriceNum;
+    } else {
+      cheapestPriceNum = nuuvemPriceNum;
+    }
+
+    let gameRow = cacheData.findIndex(r => r[0] === gameName);
+
+    if (gameRow === -1) {
+
+      priceCacheSheet.appendRow([
+        gameName,
+        cheapestPriceNum,
+        '',
+        '',
+        formattedDate,
+        cheapestPriceNum,
+        formattedDate
+      ]);
+
+      cacheData.push([
+        gameName,
+        cheapestPriceNum,
+        '',
+        '',
+        formattedDate,
+        cheapestPriceNum,
+        formattedDate
+      ]);
+
+      if (!sendWithoutImage) {
+        sendTelegramMessageWithPhoto(
+          channelChatId, imageUrl, gameName,
+          steamUrl, nuuvemUrl,
+          steamPriceNum, nuuvemPriceNum,
+          NaN, NaN, formattedDate, formattedDate
+        );
+      }
+
+      sendDiscordMessage(
+        discordWebhookUrl, gameName,
+        steamUrl, nuuvemUrl,
+        steamPriceNum, nuuvemPriceNum,
+        NaN, NaN, formattedDate, formattedDate,
+        imageUrl
+      );
+
+      Utilities.sleep(1500);
+
+    } else {
+
+      const cachedPrice = parseFloat(cacheData[gameRow][1]);
+      const cachedLowPrice = parseFloat(cacheData[gameRow][2]);
+      const cachedLowPrice2Years = parseFloat(cacheData[gameRow][5]);
+      const dateCachedLowPrice2Years = cacheData[gameRow][6];
+      const dateCachedAbsoluteLowPrice = cacheData[gameRow][7];
+      const lastNotificationDate = new Date(cacheData[gameRow][4]);
+      const daysSinceLastNotification = (now - lastNotificationDate) / (1000 * 60 * 60 * 24);
+
+      if (cheapestPriceNum !== cachedPrice || daysSinceLastNotification > notificationCooldownDays) {
+
+        if (!sendWithoutImage) {
+          sendTelegramMessageWithPhoto(
+            channelChatId, imageUrl, gameName,
+            steamUrl, nuuvemUrl,
+            steamPriceNum, nuuvemPriceNum,
+            cachedLowPrice, cachedLowPrice2Years,
+            dateCachedLowPrice2Years, dateCachedAbsoluteLowPrice
+          );
+        }
+
+        sendDiscordMessage(
+          discordWebhookUrl, gameName,
+          steamUrl, nuuvemUrl,
+          steamPriceNum, nuuvemPriceNum,
+          cachedLowPrice, cachedLowPrice2Years,
+          dateCachedLowPrice2Years, dateCachedAbsoluteLowPrice,
+          imageUrl
+        );
+
+        Utilities.sleep(1500);
+
+        priceCacheSheet.getRange(gameRow + 2, 2).setValue(cheapestPriceNum);
+        priceCacheSheet.getRange(gameRow + 2, 5).setValue(formattedDate);
+      }
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function ATUALIZAR_IMAGENS() {
+
+  
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('DescontosSteam');
+  var ultimaLinha = sheet.getLastRow();
+  if (ultimaLinha < 2) return;
+
+  var ids = sheet.getRange(2, 10, ultimaLinha - 1, 1).getValues().flat(); // Coluna J
+  var imagensExistentes = sheet.getRange(2, 2, ultimaLinha - 1, 1).getFormulas().flat(); // Coluna B
+
+  var linhasParaAtualizar = [];
+  var requests = [];
+
+  // 🔎 Identifica apenas células vazias (sem =IMAGE)
+  for (var i = 0; i < ids.length; i++) {
+
+    var appId = ids[i];
+    var formulaAtual = imagensExistentes[i];
+
+    if (
+      appId &&
+      !isNaN(appId) &&
+      (!formulaAtual || !formulaAtual.startsWith('=IMAGE('))
+    ) {
+      linhasParaAtualizar.push({
+        linha: i + 2,
+        appId: appId
+      });
+
+      requests.push({
+        url: 'https://store.steampowered.com/api/appdetails?appids=' + appId + '&filters=basic',
+        muteHttpExceptions: true
+      });
+    }
+  }
+
+  if (requests.length === 0) {
+    Logger.log("Nenhuma imagem nova para atualizar.");
+    return;
+  }
+
+  // 🚀 Faz requisições em paralelo (tudo de uma vez)
+  var responses = UrlFetchApp.fetchAll(requests);
+
+  var formulasParaInserir = [];
+
+  for (var i = 0; i < responses.length; i++) {
+
+    try {
+
+      var appId = linhasParaAtualizar[i].appId;
+      var json = JSON.parse(responses[i].getContentText());
+
+      if (json[appId] && json[appId].success) {
+        var header = json[appId].data.header_image;
+
+        formulasParaInserir.push({
+          linha: linhasParaAtualizar[i].linha,
+          formula: `=IMAGE("${header}")`
+        });
+      }
+
+    } catch (e) {
+      // ignora erro individual
+    }
+  }
+
+  // 💾 Atualiza somente as células necessárias
+  formulasParaInserir.forEach(function(item) {
+    sheet.getRange(item.linha, 2).setFormula(item.formula);
+  });
+
+  Logger.log("Imagens atualizadas: " + formulasParaInserir.length);
+}
+
+
+
+
+
+
+Sidebar.html
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 15px;
+      background: linear-gradient(180deg, #0f172a, #0b1220);
+      color: white;
+    }
+
+    h3 {
+      margin-top: 0;
+      margin-bottom: 15px;
+      text-align: center;
+      font-size: 16px;
+      letter-spacing: 0.5px;
+    }
+
+    .card {
+      background: #111827;
+      border-radius: 12px;
+      padding: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+      margin-bottom: 12px;
+    }
+
+    button {
+      width: 100%;
+      padding: 11px;
+      margin: 5px 0;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: bold;
+      transition: all 0.2s ease;
+    }
+
+    button:hover {
+      transform: scale(1.02);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .principal { background: #22c55e; }
+    .principal:hover { background: #16a34a; }
+
+    .nuuvem { background: #0ea5e9; }
+    .nuuvem:hover { background: #0284c7; }
+
+    .steam { background: #6366f1; }
+    .steam:hover { background: #4f46e5; }
+
+    .base { background: #f59e0b; }
+    .base:hover { background: #d97706; }
+
+    .telegram { background: #ef4444; }
+    .telegram:hover { background: #dc2626; }
+
+    .cache { background: #8b5cf6; }
+    .cache:hover { background: #7c3aed; }
+
+    .imagens { background: #14b8a6; }
+    .imagens:hover { background: #0d9488; }
+
+    .nuuvemAll { background: #2563eb; }
+    .nuuvemAll:hover { background: #1d4ed8; }
+
+    .gear {
+      background: #1f2937;
+      font-size: 13px;
+    }
+
+    .gear:hover {
+      background: #374151;
+    }
+
+    .submenu {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.3s ease;
+    }
+
+    .submenu.open {
+      max-height: 600px;
+    }
+
+    .status {
+      margin-top: 12px;
+      font-size: 12px;
+      opacity: 0.9;
+      min-height: 18px;
+      text-align: center;
+    }
+
+    hr {
+      border: 1px solid #1f2937;
+      margin: 12px 0;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h3>🚀 Painel de Atualização</h3>
+
+  <div class="card">
+
+    <!-- PRINCIPAL -->
+    <button class="principal" onclick="executar('ATUALIZAR_NOVOS_JOGOS')">
+      🔄 Atualizar Novos Games
+    </button>
+
+    <button class="cache" onclick="executar('atualizarPriceCache')">
+      🗄 Atualizar Price Cache
+    </button>
+
+    <hr>
+
+    <!-- ⚙ MENU OCULTO -->
+    <button class="gear" onclick="toggleMenu()">
+      ⚙ Atualizações Individuais
+    </button>
+
+    <div class="submenu" id="submenu">
+
+      <button class="nuuvem" onclick="executar('ATUALIZAR_URL_NUUVEM', true)">
+        🔗 Atualizar URL Nuuvem
+      </button>
+
+      <button class="nuuvem" onclick="executar('ATUALIZAR_PRECO_NUUVEM', true)">
+        💎 Atualizar Preço Nuuvem
+      </button>
+
+      <button class="steam" onclick="executar('ATUALIZAR_PRECO_STEAM', true)">
+        🎮 Atualizar Preço Steam
+      </button>
+
+      <button class="base" onclick="executar('ATUALIZAR_PRECO_BASE_MENSAL', true)">
+        📊 Atualizar Preço Base Mensal
+      </button>
+
+      <button class="imagens" onclick="executar('ATUALIZAR_IMAGENS')">
+        🖼 Atualizar Imagens
+      </button>
+
+    </div>
+
+    <hr>
+
+    <button class="principal" onclick="executar('IMPORTAR_SUGESTOES')">
+  📥 Importar Sugestões
+</button>
+
+    <button class="nuuvemAll" onclick="executarTodosNuuvem()">
+      🔵 Atualizar Links + $ Nuuvem
+    </button>
+
+    <button class="telegram" onclick="executar('checkAndSendTelegramMessage')">
+      📢 Enviar Telegram Agora
+    </button>
+
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <script>
+
+    function toggleMenu() {
+      const menu = document.getElementById("submenu");
+      menu.classList.toggle("open");
+    }
+
+    function executar(funcao, usarTrue) {
+
+      const status = document.getElementById("status");
+      const botoes = document.querySelectorAll("button");
+
+      botoes.forEach(btn => btn.disabled = true);
+
+      status.innerText = "⏳ Executando " + funcao + "...";
+
+      let runner = google.script.run
+        .withSuccessHandler(() => {
+          status.innerText = "✅ " + funcao + " finalizado!";
+          botoes.forEach(btn => btn.disabled = false);
+        })
+        .withFailureHandler(err => {
+          status.innerText = "❌ Erro: " + err.message;
+          botoes.forEach(btn => btn.disabled = false);
+        });
+
+      if (usarTrue === true) {
+        runner[funcao](true);
+      } else {
+        runner[funcao]();
+      }
+    }
+
+    function executarTodosNuuvem() {
+
+      const status = document.getElementById("status");
+      const botoes = document.querySelectorAll("button");
+
+      botoes.forEach(btn => btn.disabled = true);
+
+      status.innerText = "⏳ Atualizando TODOS Links e Preços Nuuvem...";
+
+      google.script.run
+        .withSuccessHandler(() => {
+
+          google.script.run
+            .withSuccessHandler(() => {
+              status.innerText = "✅ Atualização COMPLETA Nuuvem finalizada!";
+              botoes.forEach(btn => btn.disabled = false);
+            })
+            .withFailureHandler(err => {
+              status.innerText = "❌ Erro Preço: " + err.message;
+              botoes.forEach(btn => btn.disabled = false);
+            })
+            .ATUALIZAR_PRECO_NUUVEM(false);
+
+        })
+        .withFailureHandler(err => {
+          status.innerText = "❌ Erro URL: " + err.message;
+          botoes.forEach(btn => btn.disabled = false);
+        })
+        .ATUALIZAR_URL_NUUVEM(false);
+    }
+
+  </script>
+
+</body>
+</html>
+
+Code.gs
+
+
+
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('🛠 Automação')
+    .addItem('Abrir Painel', 'abrirSidebar')
+    .addToUi();
+}
+
+
+function abrirSidebar() {
+  var html = HtmlService
+    .createHtmlOutputFromFile('Sidebar')
+    .setTitle('Painel de Controle');
+
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+
+Codigos da api Google Script para linkar a planilha ao formulario do site
+Code.gs
+// Api google script Code.gs
+const ID_PLANILHA = "11CFj3_EuhBT0qrT5PtLeOddd8T46VBRprMbto9s2OyI";
+// ===============================
+// CONFIGURAÇÕES GITHUB
+// ===============================
+const GITHUB_OWNER = "7fases"; // Seu usuário
+const GITHUB_REPO = "steam-promo"; // Seu repositório
+const GITHUB_BRANCH = "main"; // Branch padrão
+const GITHUB_FILE_PATH = "games.json"; // Arquivo a ser criado no GitHub
+// ===============================
+// ENTRY POINT API
+// ===============================
+function doPost(e) {
+  try {
+    const dados = JSON.parse(e.postData.contents);
+    if (dados.acao === "buscar") {
+      return jsonResponse(buscarDadosSteam(dados.url));
+    }
+    if (dados.acao === "salvar") {
+      return jsonResponse(
+        salvarSugestao(dados.nome, dados.url, dados.id, dados.tipo)
+      );
+    }
+    if (dados.acao === "listar") {
+      return jsonResponse(listarGames());
+    }
+    return jsonResponse({ status: "erro", mensagem: "Ação inválida" });
+  } catch (erro) {
+    return jsonResponse({ status: "erro", mensagem: "Erro interno no servidor." });
+  }
+}
+function jsonResponse(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+// ===============================
+// BUSCAR DADOS NA STEAM
+// ===============================
+function buscarDadosSteam(url) {
+  const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
+  const match = String(url).match(steamRegex);
+  if (!match) {
+    return { status: "erro", mensagem: "URL inválida" };
+  }
+  const tipo = match[1].toLowerCase();
+  const id = match[2];
+ 
+  // =========================
+  // CASO APP (API OFICIAL)
+  // =========================
+  if (tipo === "app") {
+    const api = `https://store.steampowered.com/api/appdetails?appids=${id}&l=brazilian`;
+    const response = UrlFetchApp.fetch(api, { muteHttpExceptions: true });
+    const json = JSON.parse(response.getContentText());
+    if (!json[id] || !json[id].success) {
+      return { status: "erro", mensagem: "Game não encontrado na Steam" };
+    }
+    const data = json[id].data;
+    return {
+      status: "ok",
+      nome: data.name,
+      imagem: data.header_image,
+      id: id,
+      tipo: tipo
+    };
+  }
+ 
+  // =========================
+  // CASO SUB / BUNDLE / PACKAGE
+  // =========================
+  try {
+    const response = UrlFetchApp.fetch(url, {
+      muteHttpExceptions: true,
+      headers: {
+        "User-Agent": "Mozilla/5.0"
+      }
+    });
+    const html = response.getContentText();
+    const tituloMatch = html.match(/<title>(.*?)<\/title>/i);
+    let nome = tituloMatch ? tituloMatch[1] : "Versão Steam";
+    nome = nome.replace(" on Steam", "").trim();
+    const imgMatch = html.match(/property="og:image"\s*content="(.*?)"/i);
+    const imagem = imgMatch ? imgMatch[1] : "";
+    return {
+      status: "ok",
+      nome: nome,
+      imagem: imagem,
+      id: id,
+      tipo: tipo
+    };
+  } catch (e) {
+    return {
+      status: "erro",
+      mensagem: "Erro ao acessar página Steam."
+    };
+  }
+}
+// ===============================
+// CACHE AUXILIAR
+// ===============================
+const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
+function getCachedIDs(sheetName, urlColIndex, nomeColIndex, startRow) {
+  const cache = CacheService.getScriptCache();
+  const cacheKey = `ids_${sheetName}`;
+  let idsMap = cache.get(cacheKey);
+  if (idsMap) {
+    return new Map(JSON.parse(idsMap));
+  }
+  const ss = SpreadsheetApp.openById(ID_PLANILHA);
+  const sheet = ss.getSheetByName(sheetName);
+  const lastRow = sheet.getLastRow();
+  const urlValues = lastRow >= startRow
+    ? sheet.getRange(startRow, urlColIndex, lastRow - startRow + 1, 1).getValues()
+    : [];
+  const nomeValues = lastRow >= startRow
+    ? sheet.getRange(startRow, nomeColIndex, lastRow - startRow + 1, 1).getValues()
+    : [];
+  const map = new Map();
+  urlValues.forEach((row, index) => {
+    const urlExist = row[0];
+    if (urlExist) {
+      const match = String(urlExist).match(steamRegex);
+      if (match) {
+        const idFound = match[2];
+        const nomeExist = nomeValues[index][0];
+        map.set(idFound, nomeExist);
+      }
+    }
+  });
+  cache.put(cacheKey, JSON.stringify(Array.from(map.entries())), 600);
+  return map;
+}
+// ===============================
+// LISTAR GAMES
+// ===============================
+function listarGames() {
+  const cache = CacheService.getScriptCache();
+  const cacheKey = 'games_list';
+  let cachedGames = cache.get(cacheKey);
+  if (cachedGames) {
+    return { status: "ok", games: JSON.parse(cachedGames) };
+  }
+  const ss = SpreadsheetApp.openById(ID_PLANILHA);
+  const sheet = ss.getSheetByName("DescontosSteam");
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 3) {
+    return { status: "ok", games: [] };
+  }
+  const nomes = sheet.getRange(3, 3, lastRow - 2, 1).getValues();
+  const urls = sheet.getRange(3, 9, lastRow - 2, 1).getValues();
+  const formulas = sheet.getRange(3, 2, lastRow - 2, 1).getFormulas();
+  const games = nomes.map((nomeArr, i) => {
+    let imagem = '';
+    const formula = formulas[i][0];
+    const imgMatch = formula.match(/=IMAGE\("([^"]+)"\)/);
+    if (imgMatch) {
+      imagem = imgMatch[1];
+    }
+    return {
+      nome: nomeArr[0],
+      url: urls[i][0],
+      imagem: imagem
+    };
+  }).filter(game => game.nome && game.url && game.imagem);
+  const gamesJson = JSON.stringify(games);
+  cache.put(cacheKey, gamesJson, 86400); // Cache for 24 hours
+  return { status: "ok", games };
+}
+// ===============================
+// SALVAR NA SUGESTOES
+// ===============================
+function salvarSugestao(nome, url, id, tipo) {
+  const ss = SpreadsheetApp.openById(ID_PLANILHA);
+  const abaPrincipal = ss.getSheetByName("DescontosSteam");
+  const abaSugestoes = ss.getSheetByName("Sugestoes");
+  const urlFinal = `https://store.steampowered.com/${tipo}/${id}/`;
+  const existingPrincipal = getCachedIDs('DescontosSteam', 9, 3, 3);
+  const existingSug = getCachedIDs('Sugestoes', 3, 2, 2);
+  if (existingPrincipal.has(id)) {
+    const nomeExistente = existingPrincipal.get(id);
+    return {
+      status: "existe",
+      mensagem: `⚔️ O game "${nomeExistente}" já existe no sistema.`
+    };
+  }
+  if (existingSug.has(id)) {
+    const nomeExistente = existingSug.get(id);
+    return {
+      status: "existe",
+      mensagem: `⚔️ O game "${nomeExistente}" já foi sugerido recentemente.`
+    };
+  }
+  const lastRowSug = abaSugestoes.getLastRow();
+  const linha = lastRowSug + 1;
+  abaSugestoes.getRange(linha, 2).setValue(nome);
+  abaSugestoes.getRange(linha, 3).setValue(urlFinal);
+  SpreadsheetApp.flush();
+  // Atualizar o cache após a inserção
+  const cache = CacheService.getScriptCache();
+  const cacheKey = `ids_Sugestoes`;
+  let cachedData = cache.get(cacheKey);
+  let map;
+  if (cachedData) {
+    map = new Map(JSON.parse(cachedData));
+  } else {
+    map = new Map();
+  }
+  map.set(id, nome);
+  cache.put(cacheKey, JSON.stringify(Array.from(map.entries())), 600);
+  return {
+    status: "ok",
+    mensagem: "🛡️ Sugestão enviada com sucesso!"
+  };
+}
+// ===============================
+// EXPORTAR E FAZER COMMIT NO GITHUB
+// ===============================
+function exportAndCommitToGitHub() {
+  const games = listarGames().games;
+  // ⚠️ JSON.stringify SEM "JSON[" - começa com [
+  const jsonContent = JSON.stringify(games, null, 2);
+  const base64Content = Utilities.base64Encode(jsonContent, Utilities.Charset.UTF_8);
+  const token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
+  if (!token) {
+    Logger.log('❌ Erro: GITHUB_TOKEN não configurado em Script properties.');
+    return;
+  }
+  // Passo 1: Obter SHA do arquivo atual (para update; se não existir, será create)
+  const getUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}?ref=${GITHUB_BRANCH}`;
+  const getOptions = {
+    method: 'get',
+    headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' },
+    muteHttpExceptions: true
+  };
+  const getResponse = UrlFetchApp.fetch(getUrl, getOptions);
+  const getJson = JSON.parse(getResponse.getContentText());
+  const sha = getJson.sha || null; // Se não existir, sha é null (create mode)
+  // Passo 2: Commitar (update ou create)
+  const payload = {
+    message: `Atualização automática da lista de games via GAS - ${new Date().toLocaleString('pt-BR')}`,
+    content: base64Content,
+    branch: GITHUB_BRANCH
+  };
+  if (sha) payload.sha = sha; // Para update
+  const putUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`;
+  const putOptions = {
+    method: 'put',
+    headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+ 
+  const putResponse = UrlFetchApp.fetch(putUrl, putOptions);
+  const responseCode = putResponse.getResponseCode();
+ 
+  if (responseCode === 200 || responseCode === 201) {
+    Logger.log('✅ Sucesso: Lista atualizada no GitHub.');
+    CacheService.getScriptCache().remove('games_list');
+  } else {
+    Logger.log('❌ Erro ao commitar: ' + putResponse.getContentText());
+  }
+}
+
+
+
+
+Codigo do site / formulario onde a pessoa pode adicionar novos games só colando uma URL da Steam
+App.jsx
+// App.jsx
+import React, { useState, useEffect, useRef } from 'react';
+import styles from './App.module.css';
+import telegramIcon from './assets/telegram.svg';
+import discordIcon from './assets/discord.svg';
+import errorMp3 from './assets/error.mp3';
+import entrouMp3 from './assets/entrou.mp3';
+import { SkeletonGamesList } from './SkeletonLoader';
+
+// Particles canvas
+function Particles() {
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let animFrame;
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+    const SYMBOLS = ['◆', '▲', '●', '★', '♦', '⚔', '⚡', '✦', '◈', '▶'];
+    const COLORS = ['#ffcd4d', '#4d7eff', '#ff4d8d', '#4dffb0', '#ff8c4d', '#b04dff'];
+    const particles = Array.from({ length: 38 }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.7,
+      vy: (Math.random() - 0.5) * 0.7,
+      size: Math.floor(Math.random() * 3 + 1) * 4,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      symbol: SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)],
+      alpha: Math.random() * 0.45 + 0.08,
+      rotation: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.018,
+    }));
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rotation += p.rotSpeed;
+        if (p.x < -60) p.x = canvas.width + 60;
+        if (p.x > canvas.width + 60) p.x = -60;
+        if (p.y < -60) p.y = canvas.height + 60;
+        if (p.y > canvas.height + 60) p.y = -60;
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        ctx.font = `${p.size}px monospace`;
+        ctx.fillStyle = p.color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(p.symbol, 0, 0);
+        ctx.restore();
+      });
+      animFrame = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => {
+      cancelAnimationFrame(animFrame);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
+  return <canvas ref={canvasRef} className={styles['sp-canvas']} />;
+}
+
+function cleanGameName(name) {
+  name = name.replace(/^Save \d+% on /i, '');
+  name = name.replace(/^[^a-zA-Z0-9]+/, '');
+  name = name.replace(/[\u2122\u00AE\u00A9\u2120]+/g, '');
+  name = name.replace(/Base Game/g, 'Game');
+  return name.trim();
+}
+
+function MessageBubble({ mensagem, onExiting }) {
+  const [isExiting, setIsExiting] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsExiting(true);
+      setTimeout(() => {
+        onExiting();
+      }, 300);
+    }, 14000);
+    return () => clearTimeout(timer);
+  }, [onExiting]);
+  return (
+    <div className={`${styles['sp-msg-bubble']} ${styles[`sp-bubble-${mensagem.tipo}`]} ${isExiting ? styles['sp-bubble-exit'] : ''}`}>
+      <div className={styles['sp-bubble-inner']}>
+        <div className={styles['sp-bubble-corners']}>
+          <span className={styles['sp-bc']} />
+          <span className={styles['sp-bc']} />
+          <span className={styles['sp-bc']} />
+          <span className={styles['sp-bc']} />
+        </div>
+        <p className={styles['sp-bubble-text']}>{mensagem.texto}</p>
+      </div>
+      <div className={styles['sp-bubble-pointer']} />
+    </div>
+  );
+}
+
+function App() {
+  const [url, setUrl] = useState('');
+  const [gameAtual, setGameAtual] = useState(null);
+  const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
+  const [loading, setLoading] = useState(false);
+  const [enviarBloqueado, setEnviarBloqueado] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [games, setGames] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [modalLoading, setModalLoading] = useState(false);
+  const [hasLoadedGames, setHasLoadedGames] = useState(false);
+  const modalRef = useRef(null);
+
+  const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
+
+  const mostrarMensagem = (texto, tipo = 'info', playSound = false) => {
+    setMensagem({ texto, tipo });
+    if (tipo === 'erro') new Audio(errorMp3).play();
+    else if (playSound && tipo === 'sucesso') new Audio(entrouMp3).play();
+  };
+
+  const buscar = async () => {
+    if (!url.match(steamRegex)) {
+      mostrarMensagem('⚠️ URL inválida! Insira uma URL da Steam.', 'erro');
+      return;
+    }
+    mostrarMensagem('⏳ Buscando dados...', 'info');
+    setLoading(true);
+    setEnviarBloqueado(false);
+    setGameAtual(null);
+    try {
+      const response = await fetch('https://steam-promo.vercel.app/api/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ acao: 'buscar', url }),
+      });
+      const res = await response.json();
+      if (!response.ok || res.status !== 'ok') throw new Error(res.mensagem || 'Erro ao buscar jogo');
+      res.nome = cleanGameName(res.nome);
+      res.url = url;
+      setGameAtual(res);
+      mostrarMensagem('✅ Jogo encontrado!', 'sucesso');
+      setUrl('');
+    } catch (error) {
+      mostrarMensagem(`❌ ${error.message}`, 'erro');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const enviar = async () => {
+    if (!gameAtual) return;
+    mostrarMensagem('⏳ Enviando sugestão...', 'info');
+    setLoading(true);
+    try {
+      const response = await fetch('https://steam-promo.vercel.app/api/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          acao: 'salvar',
+          nome: gameAtual.nome,
+          url: gameAtual.url,
+          id: gameAtual.id,
+          tipo: gameAtual.tipo,
+        }),
+      });
+      const res = await response.json();
+      if (res.status === 'ok') {
+        mostrarMensagem(res.mensagem, 'sucesso', true);
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+        setGameAtual(null);
+        setUrl('');
+        setEnviarBloqueado(false);
+      } else if (res.status === 'existe') {
+        mostrarMensagem(res.mensagem, 'aviso');
+        setEnviarBloqueado(true);
+      } else {
+        throw new Error(res.mensagem || 'Erro ao enviar');
+      }
+    } catch (error) {
+      mostrarMensagem(`❌ ${error.message}`, 'erro');
+      setEnviarBloqueado(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchGames = async () => {
+    setModalLoading(true);
+    try {
+      const response = await fetch(
+        'https://cdn.jsdelivr.net/gh/7fases/steam-promo@main/games.json',
+        {
+          headers: {
+            'Accept': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: Arquivo não encontrado`);
+      }
+
+      const games = await response.json();
+
+      if (!Array.isArray(games)) {
+        throw new Error('Formato de dados inválido');
+      }
+
+      // Delay de 1.2s apenas na primeira carregada para ver a animação
+      if (!hasLoadedGames) {
+        await new Promise(resolve => setTimeout(resolve, 600));
+      }
+
+      setGames(games);
+      setHasLoadedGames(true);
+    } catch (error) {
+      console.error('❌ Erro ao carregar games:', error);
+      mostrarMensagem(`❌ Erro ao carregar games: ${error.message}`, 'erro');
+      setGames([]);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const openModal = async () => {
+    setIsModalOpen(true);
+    setSearchTerm('');
+    
+    if (games.length === 0) {
+      await fetchGames();
+    }
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleModalOverlayClick = (e) => {
+    if (e.target === e.currentTarget) {
+      closeModal();
+    }
+  };
+
+  const filteredGames = games.filter(game =>
+    game.nome && game.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleVibrateClick = (action) => {
+    if (navigator.vibrate) navigator.vibrate(50);
+    action();
+  };
+
+  return (
+    <div className={styles['sp-wrap']}>
+      <Particles />
+      <div className={styles['sp-scanlines']} />
+      <div className={styles['sp-card']}>
+        <div className={styles['sp-avatar']}>
+          <img
+            src="Logo2.1.webp"
+            alt="7Fases"
+          />
+        </div>
+        <span className={`${styles['sp-corner']} ${styles['sp-tl']}`} />
+        <span className={`${styles['sp-corner']} ${styles['sp-tr']}`} />
+        <span className={`${styles['sp-corner']} ${styles['sp-bl']}`} />
+        <span className={`${styles['sp-corner']} ${styles['sp-br']}`} />
+        <header className={styles['sp-header']}>
+          <span className={styles['sp-hicon']}>🎮</span>
+          <div className={styles['sp-title-block']}>
+            <h1 className={styles['sp-title']}>STEAM PROMO</h1>
+            <p className={styles['sp-subtitle']}>⚔ Rastreador de Preços ⚔</p>
+          </div>
+          <span className={styles['sp-hicon']}>🛡</span>
+        </header>
+        <div className={styles['sp-divider']}>
+          <span className={styles['sp-dot']} />
+          <span className={styles['sp-line']} />
+          <span className={styles['sp-dot']} />
+        </div>
+        <div className={styles['sp-social-section']}>
+          <p className={styles['sp-social-label']}>Acompanhe as promos pelo Discord e Telegram</p>
+          <div className={styles['sp-social-btns']}>
+            <a href="https://t.me/steampromocao" target="_blank" rel="noopener noreferrer" className={`${styles['sp-sbtn']} ${styles['sp-tg']}`}>
+              <img src={telegramIcon} alt="Telegram" width="20" height="20" />
+              <span>Telegram</span>
+            </a>
+            <a href="https://discord.com/invite/GjpMBK3kA6" target="_blank" rel="noopener noreferrer" className={`${styles['sp-sbtn']} ${styles['sp-dc']}`}>
+              <img src={discordIcon} alt="Discord" width="20" height="20" />
+              <span>Discord</span>
+            </a>
+          </div>
+        </div>
+        <div className={styles['sp-divider']}>
+          <span className={styles['sp-dot']} />
+          <span className={styles['sp-line']} />
+          <span className={styles['sp-dot']} />
+        </div>
+        <div className={styles['sp-form-wrapper']}>
+          {mensagem.texto && (
+            <MessageBubble
+              mensagem={mensagem}
+              onExiting={() => setMensagem({ texto: '', tipo: '' })}
+            />
+          )}
+          <div className={styles['sp-form']}>
+            <label className={`${styles['sp-label']} ${mensagem.texto ? styles['sp-label-hidden'] : ''}`} htmlFor="steamUrl">🎮 ADICIONE UM GAME A LISTA! URL DA STEAM:</label>
+            <div className={styles['sp-input-group']}>
+              <input
+                id="steamUrl"
+                className={styles['sp-input']}
+                type="url"
+                placeholder="https://store.steampowered.com/app/..."
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !loading && handleVibrateClick(buscar)}
+                disabled={loading}
+              />
+              <button
+                className={`${styles['sp-btn']} ${styles['sp-btn-yellow']} ${styles['sp-btn-square']}`}
+                onClick={() => handleVibrateClick(buscar)}
+                disabled={loading}
+              >
+                {loading ? <span className={styles['sp-dots']}><span>.</span><span>.</span><span>.</span></span> : '🔍'}
+              </button>
+            </div>
+          </div>
+        </div>
+        {gameAtual?.imagem && (
+          <div className={styles['sp-game-card']}>
+            <div className={styles['sp-img-frame']}>
+              <img src={gameAtual.imagem} alt={gameAtual.nome} />
+              <div className={styles['sp-img-overlay']} />
+              <p className={styles['sp-game-name']}>🎮 {gameAtual.nome}</p>
+            </div>
+          </div>
+        )}
+        {gameAtual && !enviarBloqueado && (
+          <button
+            className={`${styles['sp-btn']} ${styles['sp-btn-green']}`}
+            onClick={() => handleVibrateClick(enviar)}
+            disabled={loading}
+          >
+            {loading ? <span className={styles['sp-dots']}>ENVIANDO<span>.</span><span>.</span><span>.</span></span> : '⭐ ENVIAR SUGESTÃO'}
+          </button>
+        )}
+        <footer className={styles['sp-footer']}>
+          <div className={styles['sp-pixels']}>
+            {[...Array(8)].map((_, i) => <span key={i} className={styles['sp-px']} />)}
+          </div>
+          <p className={styles['sp-footer-text']}>🎮 STEAM PROMO 2.0 🛡</p>
+
+          <button
+            className={styles['sp-btn-float-games-mobile']}
+            onClick={() => handleVibrateClick(openModal)}
+          >
+            Games Cadastrados
+          </button>
+        </footer>
+
+        <div className={styles['sp-pixels-desktop']}>
+          {[...Array(8)].map((_, i) => <span key={i} className={styles['sp-px']} />)}
+        </div>
+        <button
+          className={styles['sp-btn-float-games-desktop']}
+          onClick={() => handleVibrateClick(openModal)}
+        >
+          Games Cadastrados
+        </button>
+      </div>
+      {isModalOpen && (
+        <div className={styles['sp-modal-overlay']} onClick={handleModalOverlayClick}>
+          <div className={styles['sp-modal']} ref={modalRef} onClick={(e) => e.stopPropagation()}>
+            <span className={`${styles['sp-modal-corner']} ${styles['sp-modal-tl']}`} />
+            <span className={`${styles['sp-modal-corner']} ${styles['sp-modal-tr']}`} />
+            <span className={`${styles['sp-modal-corner']} ${styles['sp-modal-bl']}`} />
+            <span className={`${styles['sp-modal-corner']} ${styles['sp-modal-br']}`} />
+
+            <button className={styles['sp-modal-close']} onClick={closeModal}>✕</button>
+            <h2 className={styles['sp-modal-title']}>Games Cadastrados</h2>
+            <input
+              className={styles['sp-modal-search']}
+              type="text"
+              placeholder="Buscar game..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <div className={styles['sp-modal-content']}>
+              {modalLoading ? (
+                <SkeletonGamesList />
+              ) : (
+                <ul className={styles['sp-modal-list']}>
+                  {filteredGames.length > 0 ? (
+                    filteredGames.map((game, index) => (
+                      <li key={index}>
+                        <a href={game.url} target="_blank" rel="noopener noreferrer">
+                          <img src={game.imagem} alt={game.nome} className={styles['sp-game-img']} />
+                          {game.nome}
+                        </a>
+                      </li>
+                    ))
+                  ) : (
+                    <li>Nenhum game encontrado.</li>
+                  )}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default App;
+
+App.module.css
+/* App.module.css */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+@font-face {
+  font-family: 'PixelFont';
+  src: url('./assets/pixelfont.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+:root {
+  --sp-bg: #04060f;
+  --sp-card: #080c18;
+  --sp-primary: #ffcd4d;
+  --sp-primary-dark: #9a7220;
+  --sp-primary-glow: rgba(255,205,77,0.35);
+  --sp-secondary: #4d7eff;
+  --sp-secondary-dark: #1a3a8f;
+  --sp-secondary-glow: rgba(77,126,255,0.3);
+  --sp-success: #3ddc5a;
+  --sp-error: #ff4d5e;
+  --sp-warning: #ffaa33;
+  --sp-tg: #29b5e8;
+  --sp-dc: #5865f2;
+  --sp-text: #e8dfc8;
+  --sp-dim: #7a8faa;
+  --sp-shadow: 4px 4px 0 #00000099;
+  --sp-font-title: 'Press Start 2P', monospace;
+  --sp-font-body: 'VT323', 'Courier New', monospace;
+  --sp-bubble-alpha-start: 0.92;
+  --sp-bubble-alpha-end: 0.88;
+}
+/* Bloqueia seleção de texto em todo o site */
+* {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  pointer-events: auto;
+}
+/* Remove seleção de inputs e textareas */
+input, textarea {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  caret-color: transparent;
+}
+.sp-wrap {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(77,126,255,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 70%, rgba(255,77,141,0.06) 0%, transparent 60%),
+    #04060f;
+  font-family: var(--sp-font-body);
+  color: var(--sp-text);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 16px 12px 20px; /* Reduzido para mobile */
+  box-sizing: border-box;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  touch-action: auto;
+}
+.sp-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.sp-scanlines {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px
+  );
+}
+/* Avatar - agora absolute no topo central do card */
+.sp-avatar {
+  position: absolute;
+  top: -42px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 3px solid var(--sp-primary);
+  box-shadow: 0 0 0 4px var(--sp-primary-dark), 0 0 22px var(--sp-primary-glow);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sp-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  position: relative;
+  z-index: 2;
+}
+/* Pixels desktop (escondidos por padrão) */
+.sp-pixels-desktop {
+  display: none;
+}
+/* Card */
+.sp-card {
+  position: relative;
+  z-index: 2;
+  background: var(--sp-card);
+  width: 100%;
+  max-width: 600px;
+  padding: 28px 20px 24px;
+  border: 2px solid var(--sp-secondary);
+  outline: 2px solid var(--sp-secondary-dark);
+  box-shadow: var(--sp-shadow), 0 0 30px var(--sp-secondary-glow), inset 0 0 40px rgba(0,0,0,0.5);
+  margin-top: 0;
+  border-radius: 14px;
+  animation: sp-appear 0.6s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes sp-appear {
+  from { opacity:0; transform: translateY(24px) scale(0.97); }
+  to { opacity:1; transform: translateY(0) scale(1); }
+}
+/* Corners */
+.sp-corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--sp-primary);
+  z-index: 3;
+  animation: sp-corner-pulse 2s infinite alternate;
+}
+@keyframes sp-corner-pulse {
+  from { box-shadow: none; }
+  to { box-shadow: 0 0 8px var(--sp-primary-glow); }
+}
+.sp-tl { top:8px; left:8px; border-right:none; border-bottom:none; }
+.sp-tr { top:8px; right:8px; border-left:none; border-bottom:none; animation-direction: alternate-reverse; }
+.sp-bl { bottom:8px; left:8px; border-right:none; border-top:none; animation-direction: alternate-reverse; }
+.sp-br { bottom:8px; right:8px; border-left:none; border-top:none; }
+/* Header */
+.sp-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 6px;
+  text-align: center;
+}
+.sp-hicon {
+  font-size: 1.8rem;
+  animation: sp-float 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px var(--sp-primary-glow));
+}
+.sp-hicon:last-child { animation-delay: 1.5s; }
+@keyframes sp-float {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+.sp-title-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.sp-title {
+  font-family: var(--sp-font-title);
+  font-size: clamp(0.85rem, 4.5vw, 1.5rem);
+  color: var(--sp-primary);
+  text-shadow: 3px 3px 0 var(--sp-primary-dark), 0 0 14px var(--sp-primary);
+  margin: 0;
+  letter-spacing: 2px;
+  animation: sp-glow 3s ease-in-out infinite alternate;
+}
+@keyframes sp-glow {
+  from { text-shadow: 3px 3px 0 var(--sp-primary-dark), 0 0 10px var(--sp-primary); }
+  to { text-shadow: 3px 3px 0 var(--sp-primary-dark), 0 0 22px var(--sp-primary), 0 0 44px var(--sp-primary-glow); }
+}
+.sp-subtitle {
+  font-family: var(--sp-font-body);
+  font-size: clamp(0.9rem, 3vw, 1.1rem);
+  color: var(--sp-secondary);
+  letter-spacing: 3px;
+  margin: 0;
+  text-shadow: 0 0 10px var(--sp-secondary-glow);
+  text-transform: uppercase;
+  animation: sp-flicker 6s infinite;
+}
+@keyframes sp-flicker {
+  0%,94%,100% { opacity:1; }
+  95% { opacity:0.3; }
+  97% { opacity:0.8; }
+}
+/* Divider */
+.sp-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 0;
+}
+.sp-dot {
+  width: 8px; height: 8px;
+  background: var(--sp-primary);
+  flex-shrink: 0;
+  animation: sp-dot-pulse 1.5s ease-in-out infinite alternate;
+}
+.sp-dot:last-child { animation-delay: 0.75s; }
+@keyframes sp-dot-pulse {
+  from { opacity:0.5; box-shadow: none; }
+  to { opacity:1; box-shadow: 0 0 8px var(--sp-primary); }
+}
+.sp-line {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, var(--sp-primary-dark), var(--sp-secondary), var(--sp-primary-dark));
+  background-size: 200% 100%;
+  animation: sp-line-move 3s linear infinite;
+}
+@keyframes sp-line-move {
+  from { background-position: 0% 0%; }
+  to { background-position: 200% 0%; }
+}
+/* Social */
+.sp-social-section { text-align: center; margin-bottom: 4px; }
+.sp-social-label {
+  font-family: var(--sp-font-body);
+  font-size: clamp(0.9rem, 3.5vw, 1.1rem);
+  color: var(--sp-dim);
+  margin: 0 0 14px;
+  letter-spacing: 1px;
+}
+.sp-social-btns {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+.sp-sbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 22px;
+  font-family: var(--sp-font-title);
+  font-size: 0.6rem;
+  text-decoration: none;
+  text-transform: uppercase;
+  border: 2px solid;
+  background: rgba(10,14,28,0.8);
+  min-width: 130px;
+  transition: transform 0.15s, box-shadow 0.2s, background 0.2s, color 0.2s;
+  box-shadow: var(--sp-shadow);
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+}
+@media (max-width: 360px) {
+  .sp-sbtn {
+    min-width: 108px;
+    padding: 9px 14px;
+    font-size: 0.52rem;
+  }
+  .sp-social-label { font-size: 0.85rem; }
+}
+.sp-sbtn::after {
+  content: '';
+  position: absolute;
+  top:-50%; left:-60%;
+  width:40%; height:200%;
+  background: linear-gradient(105deg, transparent, rgba(255,255,255,0.1), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.4s;
+}
+.sp-sbtn:hover::after { left: 120%; }
+.sp-tg { border-color: var(--sp-tg); color: var(--sp-tg); }
+.sp-tg:hover {
+  background: var(--sp-tg); color: #fff;
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 0 20px rgba(41,181,232,0.6), var(--sp-shadow);
+}
+.sp-dc { border-color: var(--sp-dc); color: var(--sp-dc); }
+.sp-dc:hover {
+  background: var(--sp-dc); color: #fff;
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 0 20px rgba(88,101,242,0.6), var(--sp-shadow);
+}
+/* Form wrapper */
+.sp-form-wrapper {
+  position: relative;
+}
+/* Form */
+.sp-form { display: flex; flex-direction: column; gap: 10px; }
+.sp-input-group {
+  display: flex;
+  gap: 8px;
+}
+.sp-label {
+  font-family: var(--sp-font-title);
+  font-size: 0.55rem;
+  color: var(--sp-dim);
+  margin-bottom: 10px;
+  letter-spacing: 1px;
+  transition: opacity 0.3s ease-in-out;
+}
+.sp-label-hidden {
+  opacity: 0;
+}
+.sp-input {
+  flex: 1;
+  width: auto;
+  padding: 14px;
+  font-family: var(--sp-font-body);
+  font-size: 1.05rem;
+  background: #04080f;
+  border: 2px solid #1e2d45;
+  color: var(--sp-text);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  caret-color: var(--sp-primary);
+  border-radius: 8px;
+}
+.sp-input:focus {
+  border-color: var(--sp-secondary);
+  box-shadow: 0 0 0 3px var(--sp-secondary-glow), inset 0 0 12px rgba(0,0,0,0.5);
+}
+.sp-input::placeholder { color: #2e4060; }
+.sp-input:disabled { opacity:0.5; cursor:not-allowed; }
+/* Buttons */
+.sp-btn {
+  width: 100%;
+  margin-top: 14px;
+  padding: 16px 12px;
+  font-family: var(--sp-font-title);
+  font-size: 0.7rem;
+  border: 2px solid;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  box-shadow: var(--sp-shadow);
+  transition: transform 0.1s, box-shadow 0.2s, filter 0.2s;
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+}
+.sp-btn-square {
+  width: 52px;
+  min-width: 52px;
+  height: 52px;
+  min-height: 52px;
+  margin-top: 0;
+  padding: 0;
+  font-size: 1.5rem;
+}
+.sp-btn:active:not(:disabled) {
+  transform: scale(0.97) translateY(2px);
+  box-shadow: 2px 2px 0 #00000099;
+}
+.sp-btn:disabled { opacity:0.45; cursor:not-allowed; filter:grayscale(0.4); }
+.sp-btn-yellow {
+  background: linear-gradient(180deg, var(--sp-primary), var(--sp-primary-dark));
+  border-color: var(--sp-primary-dark);
+  color: #0a060f;
+}
+.sp-btn-yellow:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 0 22px var(--sp-primary-glow), var(--sp-shadow);
+  filter: brightness(1.1);
+}
+.sp-btn-green {
+  background: linear-gradient(180deg, var(--sp-success), #1a5c2a);
+  border-color: #1a5c2a;
+  color: #fff;
+  animation: sp-green-pulse 2s infinite alternate;
+}
+@keyframes sp-green-pulse {
+  from { box-shadow: var(--sp-shadow); }
+  to { box-shadow: 0 0 18px rgba(61,220,90,0.45), var(--sp-shadow); }
+}
+.sp-btn-green:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.15);
+  box-shadow: 0 0 24px rgba(61,220,90,0.5), var(--sp-shadow);
+}
+/* Botão flutuante Games Cadastrados - Mobile */
+.sp-btn-float-games-mobile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(180deg, var(--sp-secondary), var(--sp-secondary-dark));
+  border: 2px solid var(--sp-secondary-dark);
+  color: #fff;
+  font-family: var(--sp-font-title);
+  font-size: 0.65rem;
+  padding: 12px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 12px;
+  width: 100%;
+  box-shadow: var(--sp-shadow);
+  transition: transform 0.1s, box-shadow 0.2s, filter 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: bold;
+}
+.sp-btn-float-games-mobile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 22px var(--sp-secondary-glow), var(--sp-shadow);
+  filter: brightness(1.1);
+}
+.sp-btn-float-games-mobile:active {
+  transform: scale(0.97) translateY(2px);
+  box-shadow: 2px 2px 0 #00000099;
+}
+/* Botão Games Cadastrados - Desktop (escondido por padrão) */
+.sp-btn-float-games-desktop {
+  display: none;
+}
+@media (min-width: 768px) {
+  .sp-btn-float-games-mobile {
+    display: none;
+  }
+  .sp-btn-float-games-desktop {
+    display: flex;
+    position: absolute;
+    bottom: -32px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 250;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: linear-gradient(180deg, var(--sp-secondary), var(--sp-secondary-dark));
+    border: 2px solid var(--sp-secondary-dark);
+    color: #fff;
+    font-family: var(--sp-font-title);
+    font-size: 0.65rem;
+    padding: 12px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: var(--sp-shadow);
+    transition: transform 0.1s, box-shadow 0.2s, filter 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: bold;
+    white-space: nowrap;
+  }
+  .sp-btn-float-games-desktop:hover {
+    transform: translateX(-50%) translateY(-2px);
+    box-shadow: 0 0 22px var(--sp-secondary-glow), var(--sp-shadow);
+    filter: brightness(1.1);
+  }
+  .sp-btn-float-games-desktop:active {
+    transform: translateX(-50%) scale(0.97) translateY(2px);
+    box-shadow: 2px 2px 0 #00000099;
+  }
+}
+/* Loading dots */
+.sp-dots {
+  font-size: 1.2rem;
+}
+.sp-dots span {
+  animation: sp-blink 1.2s infinite;
+  opacity: 0;
+}
+.sp-dots span:nth-child(1) { animation-delay: 0s; }
+.sp-dots span:nth-child(2) { animation-delay: 0.3s; }
+.sp-dots span:nth-child(3) { animation-delay: 0.6s; }
+@keyframes sp-blink {
+  0%,80%,100% { opacity:0; }
+  40% { opacity:1; }
+}
+/* Game card */
+.sp-game-card {
+  margin-top: 20px;
+  animation: sp-slide-up 0.4s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes sp-slide-up {
+  from { opacity:0; transform: translateY(16px); }
+  to { opacity:1; transform: translateY(0); }
+}
+.sp-img-frame {
+  position: relative;
+  padding: 5px;
+  background: #04060a;
+  border: 2px solid var(--sp-secondary);
+  outline: 2px solid var(--sp-secondary-dark);
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.8), var(--sp-shadow), 0 0 16px var(--sp-secondary-glow);
+  overflow: hidden;
+  border-radius: 10px;
+}
+.sp-img-frame img {
+  width: 100%;
+  display: block;
+  max-height: 240px;
+  object-fit: cover;
+}
+.sp-img-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 60%, rgba(8,12,24,0.7) 100%);
+  pointer-events: none;
+}
+.sp-game-name {
+  position: absolute;
+  bottom: 20px;
+  left: 12px;
+  right: 12px;
+  margin: 0;
+  font-family: var(--sp-font-body);
+  font-size: clamp(0.9rem, 3vw, 1.1rem);
+  color: #fff;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+  word-break: break-word;
+  line-height: 1.4;
+  z-index: 2;
+  max-height: 3.2em;
+  overflow: hidden;
+}
+/* Messages - novo design como balão de fala */
+.sp-msg-bubble {
+  position: absolute;
+  top: 35px;
+  left: 45%;
+  transform: translate(-50%, -100%);
+  z-index: 200;
+  width: calc(100% - 40px);
+  max-width: 520px;
+  animation: sp-bubble-enter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes sp-bubble-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -60%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1);
+  }
+}
+.sp-bubble-exit {
+  animation: sp-bubble-exit 0.3s cubic-bezier(0.4, 0, 1, 1) both;
+}
+@keyframes sp-bubble-exit {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -120%) scale(0.9);
+  }
+}
+.sp-bubble-inner {
+  position: relative;
+  padding: 16px 20px;
+  background: #0a0e1a;
+  border: 3px solid;
+  border-radius: 8px;
+  box-shadow: 0 0 0 2px #00000077, inset 0 0 20px rgba(0,0,0,0.6);
+}
+.sp-bubble-info .sp-bubble-inner {
+  border-color: var(--sp-secondary);
+  background: linear-gradient(135deg, rgba(77,126,255,var(--sp-bubble-alpha-start)), rgba(77,126,255,var(--sp-bubble-alpha-end)));
+  box-shadow: 0 0 0 2px #00000077, 0 0 20px rgba(77,126,255,0.4), inset 0 0 20px rgba(0,0,0,0.6);
+}
+.sp-bubble-sucesso .sp-bubble-inner {
+  border-color: var(--sp-success);
+  background: linear-gradient(135deg, rgba(61,220,90,var(--sp-bubble-alpha-start)), rgba(61,220,90,var(--sp-bubble-alpha-end)));
+  box-shadow: 0 0 0 2px #00000077, 0 0 20px rgba(61,220,90,0.4), inset 0 0 20px rgba(0,0,0,0.6);
+}
+.sp-bubble-erro .sp-bubble-inner {
+  border-color: var(--sp-error);
+  background: linear-gradient(135deg, rgba(255,77,94,var(--sp-bubble-alpha-start)), rgba(255,77,94,var(--sp-bubble-alpha-end)));
+  box-shadow: 0 0 0 2px #00000077, 0 0 20px rgba(255,77,94,0.4), inset 0 0 20px rgba(0,0,0,0.6);
+  animation: sp-bubble-error-shake 0.4s ease both;
+}
+@keyframes sp-bubble-error-shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+.sp-bubble-aviso .sp-bubble-inner {
+  border-color: var(--sp-warning);
+  background: linear-gradient(135deg, rgba(255,170,51,var(--sp-bubble-alpha-start)), rgba(255,170,51,var(--sp-bubble-alpha-end)));
+  box-shadow: 0 0 0 2px #00000077, 0 0 20px rgba(255,170,51,0.4), inset 0 0 20px rgba(0,0,0,0.6);
+}
+.sp-bubble-corners {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  pointer-events: none;
+}
+.sp-bc {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  opacity: 0.6;
+}
+.sp-bubble-info .sp-bc {
+  background: var(--sp-secondary);
+}
+.sp-bubble-sucesso .sp-bc {
+  background: var(--sp-success);
+}
+.sp-bubble-erro .sp-bc {
+  background: var(--sp-error);
+}
+.sp-bubble-aviso .sp-bc {
+  background: var(--sp-warning);
+}
+.sp-bc:nth-child(1) { top: 0; left: 0; }
+.sp-bc:nth-child(2) { top: 0; right: 0; }
+.sp-bc:nth-child(3) { bottom: 0; left: 0; }
+.sp-bc:nth-child(4) { bottom: 0; right: 0; }
+.sp-bubble-text {
+  margin: 0;
+  font-family: 'PixelFont', monospace;
+  font-size: clamp(0.8rem, 3vw, 1.1rem);
+  letter-spacing: 0.5px;
+  line-height: 1.5;
+  word-break: break-word;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
+  font-weight: bold;
+}
+.sp-bubble-info .sp-bubble-text {
+  color: #ffffff;
+}
+.sp-bubble-sucesso .sp-bubble-text {
+  color: #ffffff;
+}
+.sp-bubble-erro .sp-bubble-text {
+  color: #ffffff;
+}
+.sp-bubble-aviso .sp-bubble-text {
+  color: #ffffff;
+}
+.sp-bubble-pointer {
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-top: 12px solid #0a0e1a;
+  z-index: -1;
+}
+.sp-bubble-info .sp-bubble-pointer {
+  border-top-color: var(--sp-secondary);
+  filter: drop-shadow(0 3px 0 rgba(77,126,255,0.3));
+}
+.sp-bubble-sucesso .sp-bubble-pointer {
+  border-top-color: var(--sp-success);
+  filter: drop-shadow(0 3px 0 rgba(61,220,90,0.3));
+}
+.sp-bubble-erro .sp-bubble-pointer {
+  border-top-color: var(--sp-error);
+  filter: drop-shadow(0 3px 0 rgba(255,77,94,0.3));
+}
+.sp-bubble-aviso .sp-bubble-pointer {
+  border-top-color: var(--sp-warning);
+  filter: drop-shadow(0 3px 0 rgba(255,170,51,0.3));
+}
+/* Modal */
+.sp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  animation: sp-fade-in 0.3s ease;
+  padding: 20px 12px;
+  box-sizing: border-box;
+}
+@keyframes sp-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.sp-modal {
+  background: var(--sp-card);
+  padding: 40px 24px 24px;
+  border: 2px solid var(--sp-secondary);
+  outline: 2px solid var(--sp-secondary-dark);
+  box-shadow: var(--sp-shadow), 0 0 30px var(--sp-secondary-glow);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 570px;
+  height: 70vh;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  animation: sp-modal-appear 0.4s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes sp-modal-appear {
+  from { opacity:0; transform: scale(0.95); }
+  to { opacity:1; transform: scale(1); }
+}
+/* Corners da Modal */
+.sp-modal-corner {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--sp-primary);
+  z-index: 3;
+}
+.sp-modal-tl { top:8px; left:8px; border-right:none; border-bottom:none; }
+.sp-modal-tr { top:8px; right:8px; border-left:none; border-bottom:none; }
+.sp-modal-bl { bottom:8px; left:8px; border-right:none; border-top:none; }
+.sp-modal-br { bottom:8px; right:8px; border-left:none; border-top:none; }
+.sp-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: transparent;
+  border: 0 none;
+  color: var(--sp-error);
+  font-size: 1.2rem;
+  cursor: pointer;
+  z-index: 310;
+  transition: transform 0.1s, filter 0.2s;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  line-height: 1;
+  outline: none;
+}
+.sp-modal-close:hover {
+  transform: scale(1.15);
+  filter: brightness(1.2);
+}
+.sp-modal-close:active {
+  transform: scale(0.95);
+}
+.sp-modal-close:focus {
+  outline: none;
+}
+.sp-modal-title {
+  font-family: var(--sp-font-title);
+  font-size: clamp(0.7rem, 3vw, 1rem);
+  color: var(--sp-primary);
+  text-align: center;
+  margin: 0 0 16px 0;
+  letter-spacing: 1px;
+}
+.sp-modal-search {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 16px;
+  background: #04080f;
+  border: 2px solid #1e2d45;
+  color: var(--sp-text);
+  font-family: var(--sp-font-body);
+  font-size: 1rem;
+  border-radius: 8px;
+  caret-color: var(--sp-primary);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.sp-modal-search:focus {
+  border-color: var(--sp-secondary);
+  box-shadow: 0 0 0 3px var(--sp-secondary-glow);
+  outline: none;
+}
+.sp-modal-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.sp-modal-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 8px;
+  min-height: 0;
+}
+.sp-modal-list::-webkit-scrollbar {
+  width: 12px;
+}
+.sp-modal-list::-webkit-scrollbar-track {
+  background: #0a0e1a;
+  border-radius: 6px;
+}
+.sp-modal-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--sp-secondary), #ffcd4d);
+  border-radius: 6px;
+  border: 2px solid #0a0e1a;
+  box-shadow: inset 0 0 8px rgba(77,126,255,0.4);
+}
+.sp-modal-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #5c8cff, #ffd966);
+  box-shadow: inset 0 0 12px rgba(77,126,255,0.6);
+}
+/* Firefox scrollbar */
+.sp-modal-list {
+  scrollbar-color: rgba(77,126,255,0.8) #0a0e1a;
+  scrollbar-width: thin;
+}
+.sp-modal-list li {
+  margin-bottom: 12px;
+}
+.sp-modal-list a {
+  color: var(--sp-secondary);
+  text-decoration: none;
+  font-size: 1.05rem;
+  font-family: var(--sp-font-body);
+  transition: color 0.2s, text-shadow 0.2s, background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  word-break: break-word;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+.sp-modal-list a:hover {
+  color: #ffcd4d;
+  text-shadow: 0 0 8px var(--sp-primary-glow);
+  background: rgba(255,255,255,0.05);
+}
+.sp-game-img {
+  width: 92px;
+  height: 43px;
+  object-fit: cover;
+  border-radius: 4px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.5);
+}
+.sp-modal-loading {
+  text-align: center;
+  color: var(--sp-dim);
+  padding: 24px;
+  font-family: var(--sp-font-body);
+}
+/* Footer */
+.sp-footer {
+  margin-top: 28px;
+  text-align: center;
+  padding-top: 16px;
+  border-top: 1px solid #1a2340;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.sp-pixels {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+.sp-px {
+  width: 6px; height: 6px;
+  display: inline-block;
+  animation: sp-pixel-dance 1.5s ease-in-out infinite;
+}
+.sp-px:nth-child(1) { background: var(--sp-primary); animation-delay:0s; }
+.sp-px:nth-child(2) { background: var(--sp-secondary); animation-delay:0.15s; }
+.sp-px:nth-child(3) { background: #ff4d8d; animation-delay:0.3s; }
+.sp-px:nth-child(4) { background: var(--sp-success); animation-delay:0.45s; }
+.sp-px:nth-child(5) { background: var(--sp-primary); animation-delay:0.6s; }
+.sp-px:nth-child(6) { background: var(--sp-secondary); animation-delay:0.75s; }
+.sp-px:nth-child(7) { background: #ff4d8d; animation-delay:0.9s; }
+.sp-px:nth-child(8) { background: var(--sp-success); animation-delay:1.05s; }
+@keyframes sp-pixel-dance {
+  0%,100% { transform: translateY(0); opacity:0.6; }
+  50% { transform: translateY(-8px); opacity:1; }
+}
+.sp-footer-text {
+  font-family: var(--sp-font-title);
+  font-size: 0.48rem;
+  color: var(--sp-dim);
+  margin: 0;
+  letter-spacing: 2px;
+  animation: sp-footer-glow 3s ease-in-out infinite alternate;
+}
+@keyframes sp-footer-glow {
+  from { color: var(--sp-dim); }
+  to { color: var(--sp-secondary); text-shadow: 0 0 12px var(--sp-secondary-glow); }
+}
+/* Responsive */
+@media (min-width: 480px) {
+  .sp-wrap { padding: 40px 16px 48px; }
+  .sp-card { padding: 36px 32px 28px; }
+  .sp-avatar { width: 62px; height: 62px; top: -47px; }
+}
+@media (min-width: 768px) {
+  .sp-wrap { padding: 80px 24px 60px; }
+  .sp-card {
+    max-width: 680px;
+    padding: 44px 40px 36px;
+  }
+  .sp-img-frame img { max-height: 300px; }
+  .sp-avatar { width: 98px; height: 98px; top: -72px; }
+  
+  /* Modal desktop */
+  .sp-modal {
+    max-width: 646px;
+    height: 65vh;
+  }
+  .sp-pixels-desktop {
+    display: flex;
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    right: -37px;
+    transform: translateY(-50%) rotate(90deg);
+    gap: 6px;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .sp-footer .sp-pixels {
+    display: none;
+  }
+  
+  @keyframes sp-pixel-dance {
+    0%,100% { transform: translateX(0); opacity:0.6; }
+    50% { transform: translateX(-4px); opacity:1; }
+  }
+  
+  .sp-footer {
+    position: absolute;
+    left: -85px;
+    top: 50%;
+    transform: translateY(-50%) rotate(-90deg);
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    flex-direction: row;
+  }
+  
+  .sp-footer-text {
+    white-space: nowrap;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+
