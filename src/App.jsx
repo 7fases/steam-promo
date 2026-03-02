@@ -130,76 +130,44 @@ function App() {
     else if (playSound && tipo === 'sucesso') new Audio(entrouMp3).play();
   };
 
-const buscar = async () => {
-  if (!url.match(steamRegex)) {
-    mostrarMensagem('⚠️ URL inválida! Insira uma URL da Steam.', 'erro');
-    return;
-  }
-  
-  mostrarMensagem('⏳ Buscando dados...', 'info');
-  setLoading(true);
-  setImageLoading(false);
-  setEnviarBloqueado(false);
-  setGameAtual(null);
-  
-  const startTime = performance.now(); // ✅ Medir tempo
-  
-  try {
-    const controller = new AbortController(); // ✅ Timeout no frontend
-    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 segundos max
-    
-    const response = await fetch('https://steam-promo.vercel.app/api/google', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ acao: 'buscar', url }),
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
-    
-    const res = await response.json();
-    if (!response.ok || res.status !== 'ok') {
-      throw new Error(res.mensagem || 'Erro ao buscar jogo');
+  const buscar = async () => {
+    if (!url.match(steamRegex)) {
+      mostrarMensagem('⚠️ URL inválida! Insira uma URL da Steam.', 'erro');
+      return;
     }
     
-    res.url = url;
-    setGameAtual(res);
+    mostrarMensagem('⏳ Buscando dados...', 'info');
+    setLoading(true);
+    setImageLoading(false); // Reset
+    setEnviarBloqueado(false);
+    setGameAtual(null);
     
-    if (res.imagem) {
-      setImageLoading(true);
+    try {
+      const response = await fetch('https://steam-promo.vercel.app/api/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ acao: 'buscar', url }),
+      });
+      const res = await response.json();
+      if (!response.ok || res.status !== 'ok') {
+        throw new Error(res.mensagem || 'Erro ao buscar jogo');
+      }
+      res.url = url;
+      setGameAtual(res);
       
-      // ✅ Pré-carregar imagem com timeout
-      const img = new Image();
-      const imgTimeout = setTimeout(() => {
-        setImageLoading(false); // Para skeleton mesmo se demorar muito
-      }, 8000); // 8 segundos para carregar imagem
+      // ✅ Mostra skeleton e começa a carregar imagem
+      if (res.imagem) {
+        setImageLoading(true);
+      }
       
-      img.onload = () => {
-        clearTimeout(imgTimeout);
-        setImageLoading(false);
-      };
-      
-      img.onerror = () => {
-        clearTimeout(imgTimeout);
-        setImageLoading(false);
-      };
-      
-      img.src = res.imagem;
-    }
-    
-    const loadTime = (performance.now() - startTime).toFixed(0);
-    mostrarMensagem(`✅ Jogo encontrado em ${loadTime}ms!`, 'sucesso');
-    setUrl('');
-  } catch (error) {
-    if (error.name === 'AbortError') {
-      mostrarMensagem('❌ Busca demorou muito, tente novamente', 'erro');
-    } else {
+      mostrarMensagem('✅ Jogo encontrado!', 'sucesso');
+      setUrl('');
+    } catch (error) {
       mostrarMensagem(`❌ ${error.message}`, 'erro');
+    } finally {
+      setLoading(false);
     }
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   // ✅ Quando a imagem REALMENTE carrega
   const handleImageLoad = () => {
