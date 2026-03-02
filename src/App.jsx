@@ -153,6 +153,17 @@ function App() {
       });
       const res = await response.json();
       
+      // ✅ Se for gratuito, mostra alerta amarelo e bloqueia
+      if (res.status === 'gratuito') {
+        setGameAtual(null);
+        setImageLoading(false);
+        mostrarMensagem(res.mensagem, 'aviso');
+        setEnviarBloqueado(true);
+        setUrl('');
+        setLoading(false);
+        return;
+      }
+      
       // ✅ Se der erro, para o skeleton e limpa tudo
       if (!response.ok || res.status !== 'ok') {
         setGameAtual(null);
