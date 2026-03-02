@@ -1109,8 +1109,8 @@ input, textarea {
 /* --sp-scan-color: Color of the scan line (rgba) */
 /* --sp-grid-size: Size of the pixel grid overlay */
 :root {
-  --sp-reveal-duration: 0.85s;
-  --sp-reveal-blur-start: 25px;
+  --sp-reveal-duration: 1.05s;
+  --sp-reveal-blur-start: 8px;
   --sp-reveal-brightness: 1.4;
   --sp-reveal-scale: 1.03;
   --sp-scan-color: rgba(255, 35, 101, 0.6);
