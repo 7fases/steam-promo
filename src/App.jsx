@@ -107,10 +107,61 @@ function MessageBubble({ mensagem, onExiting }) {
   );
 }
 
+// Pixel art SVG icons
+function PixelLupa({ size = 20, color = '#0a060f' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" style={{ imageRendering: 'pixelated' }}>
+      {/* Lens circle - pixel style */}
+      <rect x="4" y="1" width="6" height="1" fill={color}/>
+      <rect x="3" y="2" width="1" height="1" fill={color}/>
+      <rect x="10" y="2" width="1" height="1" fill={color}/>
+      <rect x="2" y="3" width="1" height="2" fill={color}/>
+      <rect x="11" y="3" width="1" height="2" fill={color}/>
+      <rect x="2" y="5" width="1" height="2" fill={color}/>
+      <rect x="11" y="5" width="1" height="2" fill={color}/>
+      <rect x="3" y="7" width="1" height="1" fill={color}/>
+      <rect x="10" y="7" width="1" height="1" fill={color}/>
+      <rect x="4" y="8" width="6" height="1" fill={color}/>
+      {/* Handle */}
+      <rect x="10" y="8" width="1" height="1" fill={color}/>
+      <rect x="11" y="9" width="1" height="1" fill={color}/>
+      <rect x="12" y="10" width="1" height="1" fill={color}/>
+      <rect x="13" y="11" width="2" height="1" fill={color}/>
+      <rect x="13" y="12" width="2" height="1" fill={color}/>
+      {/* Glint */}
+      <rect x="4" y="3" width="1" height="1" fill={color} opacity="0.4"/>
+      <rect x="5" y="3" width="1" height="1" fill={color} opacity="0.25"/>
+    </svg>
+  );
+}
+
+function PixelSword({ size = 16, color = '#fff' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" style={{ imageRendering: 'pixelated' }}>
+      <rect x="13" y="0" width="2" height="1" fill={color}/>
+      <rect x="12" y="1" width="3" height="1" fill={color}/>
+      <rect x="11" y="2" width="2" height="1" fill={color}/>
+      <rect x="10" y="3" width="2" height="1" fill={color}/>
+      <rect x="9" y="4" width="2" height="1" fill={color}/>
+      <rect x="8" y="5" width="2" height="1" fill={color}/>
+      <rect x="7" y="6" width="2" height="1" fill={color}/>
+      <rect x="6" y="7" width="2" height="1" fill={color}/>
+      {/* Guard */}
+      <rect x="4" y="8" width="5" height="1" fill={color}/>
+      {/* Grip */}
+      <rect x="5" y="9" width="1" height="1" fill={color}/>
+      <rect x="4" y="10" width="1" height="1" fill={color}/>
+      {/* Pommel */}
+      <rect x="3" y="11" width="2" height="1" fill={color}/>
+    </svg>
+  );
+}
+
 function App() {
   const [url, setUrl] = useState('');
   const [gameAtual, setGameAtual] = useState(null);
   const [imageLoading, setImageLoading] = useState(false);
+  const [pixelRevealing, setPixelRevealing] = useState(false);
   const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
   const [loading, setLoading] = useState(false);
   const [enviarBloqueado, setEnviarBloqueado] = useState(false);
@@ -193,12 +244,14 @@ function App() {
     }
   };
 
-  // ✅ Quando a imagem REALMENTE carrega - com graceful transition
+  // ✅ Quando a imagem REALMENTE carrega - com pixel reveal 8-bit
   const handleImageLoad = () => {
-    // Aguarda um pouco para a transição suave
+    setPixelRevealing(true);
+    setImageLoading(false);
+    // Remove pixel reveal class after animation completes
     setTimeout(() => {
-      setImageLoading(false);
-    }, 100);
+      setPixelRevealing(false);
+    }, 800);
   };
 
   // ✅ Quando a imagem falha em carregar, para o skeleton
@@ -377,11 +430,11 @@ function App() {
                 disabled={loading}
               />
               <button
-                className={`${styles['sp-btn']} ${styles['sp-btn-yellow']} ${styles['sp-btn-square']}`}
+                className={`${styles['sp-btn']} ${styles['sp-btn-yellow']} ${styles['sp-btn-square']} ${styles['sp-btn-8bit']}`}
                 onClick={() => handleVibrateClick(buscar)}
                 disabled={loading}
               >
-                {loading ? <span className={styles['sp-dots']}><span>.</span><span>.</span><span>.</span></span> : '🔍'}
+                {loading ? <span className={styles['sp-dots']}><span>.</span><span>.</span><span>.</span></span> : <PixelLupa size={22} color="#0a060f" />}
               </button>
             </div>
           </div>
@@ -394,9 +447,9 @@ function App() {
           </div>
         ) : null}
 
-        {/* ✅ MOSTRA IMAGEM REAL QUANDO NÃO ESTÁ CARREGANDO COM GRACEFUL TRANSITION */}
+        {/* ✅ MOSTRA IMAGEM REAL QUANDO NÃO ESTÁ CARREGANDO COM PIXEL REVEAL 8-BIT */}
         {gameAtual?.imagem && !imageLoading && (
-          <div className={styles['sp-game-card-wrapper']}>
+          <div className={`${styles['sp-game-card-wrapper']} ${pixelRevealing ? styles['sp-pixel-revealing'] : ''}`}>
             <div className={styles['sp-game-card']}>
               <div className={styles['sp-img-frame']}>
                 <img 
@@ -405,8 +458,9 @@ function App() {
                   alt={gameAtual.nome}
                   onLoad={handleImageLoad}
                   onError={handleImageError}
-                  className={styles['sp-game-image']}
+                  className={`${styles['sp-game-image']} ${pixelRevealing ? styles['sp-pixel-reveal'] : ''}`}
                 />
+                {pixelRevealing && <div className={styles['sp-pixel-scan-line']} />}
                 <div className={styles['sp-img-overlay']} />
                 <p className={styles['sp-game-name']}>🎮 {gameAtual.nome}</p>
               </div>
@@ -427,7 +481,7 @@ function App() {
 
         {gameAtual && !enviarBloqueado && (
           <button
-            className={`${styles['sp-btn']} ${styles['sp-btn-green']}`}
+            className={`${styles['sp-btn']} ${styles['sp-btn-green']} ${styles['sp-btn-8bit']}`}
             onClick={() => handleVibrateClick(enviar)}
             disabled={loading}
           >
@@ -441,10 +495,10 @@ function App() {
           <p className={styles['sp-footer-text']}>🎮 STEAM PROMO 2.0 🛡</p>
 
           <button
-            className={styles['sp-btn-float-games-mobile']}
+            className={`${styles['sp-btn-float-games-mobile']} ${styles['sp-btn-8bit']}`}
             onClick={() => handleVibrateClick(openModal)}
           >
-            Games Cadastrados
+            <PixelSword size={14} color="#fff" /> Games Cadastrados
           </button>
         </footer>
 
@@ -452,10 +506,10 @@ function App() {
           {[...Array(8)].map((_, i) => <span key={i} className={styles['sp-px']} />)}
         </div>
         <button
-          className={styles['sp-btn-float-games-desktop']}
+          className={`${styles['sp-btn-float-games-desktop']} ${styles['sp-btn-8bit']}`}
           onClick={() => handleVibrateClick(openModal)}
         >
-          Games Cadastrados
+          <PixelSword size={14} color="#fff" /> Games Cadastrados
         </button>
       </div>
       {isModalOpen && (
