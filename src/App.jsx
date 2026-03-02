@@ -131,16 +131,19 @@ function App() {
   };
 
   const buscar = async () => {
+    // ✅ Valida URL IMEDIATAMENTE
     if (!url.match(steamRegex)) {
       mostrarMensagem('⚠️ URL inválida! Insira uma URL da Steam.', 'erro');
       return;
     }
     
+    // ✅ Mostra skeleton IMEDIATAMENTE ao clicar em buscar (antes mesmo de fazer requisição)
+    setGameAtual({ nome: '', imagem: '', id: '', tipo: '' });
+    setImageLoading(true);
+    
     mostrarMensagem('⏳ Buscando dados...', 'info');
     setLoading(true);
-    setImageLoading(false); // Reset
     setEnviarBloqueado(false);
-    setGameAtual(null);
     
     try {
       const response = await fetch('https://steam-promo.vercel.app/api/google', {
@@ -150,14 +153,18 @@ function App() {
       });
       const res = await response.json();
       if (!response.ok || res.status !== 'ok') {
+        setGameAtual(null);
+        setImageLoading(false);
         throw new Error(res.mensagem || 'Erro ao buscar jogo');
       }
       res.url = url;
       setGameAtual(res);
       
-      // ✅ Mostra skeleton e começa a carregar imagem
+      // ✅ Skeleton já está aparecendo, agora carrega a imagem
       if (res.imagem) {
         setImageLoading(true);
+      } else {
+        setImageLoading(false);
       }
       
       mostrarMensagem('✅ Jogo encontrado!', 'sucesso');
