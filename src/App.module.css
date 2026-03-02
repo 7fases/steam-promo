@@ -1032,29 +1032,60 @@ input, textarea {
   }
 }
 
-
 /* ✅ GRACEFUL TRANSITION - Skeleton para Imagem */
+
+/* ================= SKELETON ================= */
+
 .sp-skeleton-wrapper {
-  animation: sp-skeleton-fadeIn 0.6s ease-in-out;
+  animation: sp-skeleton-fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ✨ Shimmer elegante */
+.sp-skeleton-wrapper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 25%,
+    rgba(255, 255, 255, 0.06) 50%,
+    transparent 75%
+  );
+  animation: sp-shimmer 1.4s infinite linear;
+}
+
+@keyframes sp-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 @keyframes sp-skeleton-fadeIn {
   from {
     opacity: 0;
+    transform: scale(0.98);
   }
   to {
     opacity: 1;
+    transform: scale(1);
   }
 }
 
+/* ================= WRAPPER ================= */
+
 .sp-game-card-wrapper {
-  animation: sp-image-fadeIn 0.6s ease-in-out;
+  animation: sp-image-fadeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes sp-image-fadeIn {
   from {
     opacity: 0;
-    transform: translateY(5px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -1062,15 +1093,22 @@ input, textarea {
   }
 }
 
+/* ================= IMAGE ================= */
+
 .sp-game-image {
-  animation: sp-image-load 0.8s ease-in-out;
+  animation: sp-image-load 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
 }
 
 @keyframes sp-image-load {
   from {
     opacity: 0;
+    transform: scale(1.05);
+    filter: blur(4px);
   }
   to {
     opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
   }
 }
