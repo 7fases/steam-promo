@@ -67,6 +67,19 @@ function Particles() {
   return <canvas ref={canvasRef} className={styles['sp-canvas']} />;
 }
 
+// ✅ SKELETON LOADER PARA IMAGEM
+function SkeletonGameCard() {
+  return (
+    <div className={styles['sp-game-card']}>
+      <div className={styles['sp-img-frame']}>
+        <div className={styles['sp-skeleton-img']} />
+        <div className={styles['sp-img-overlay']} />
+        <div className={styles['sp-skeleton-text']} />
+      </div>
+    </div>
+  );
+}
+
 function MessageBubble({ mensagem, onExiting }) {
   const [isExiting, setIsExiting] = useState(false);
   useEffect(() => {
@@ -97,6 +110,7 @@ function MessageBubble({ mensagem, onExiting }) {
 function App() {
   const [url, setUrl] = useState('');
   const [gameAtual, setGameAtual] = useState(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
   const [loading, setLoading] = useState(false);
   const [enviarBloqueado, setEnviarBloqueado] = useState(false);
@@ -122,6 +136,7 @@ function App() {
     }
     mostrarMensagem('⏳ Buscando dados...', 'info');
     setLoading(true);
+    setImageLoaded(false);
     setEnviarBloqueado(false);
     setGameAtual(null);
     try {
@@ -141,6 +156,11 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // ✅ Quando a imagem carrega
+  const handleImageLoad = () => {
+    setImageLoaded(true);
   };
 
   const enviar = async () => {
@@ -165,6 +185,7 @@ function App() {
         if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
         setGameAtual(null);
         setUrl('');
+        setImageLoaded(false);
         setEnviarBloqueado(false);
       } else if (res.status === 'existe') {
         mostrarMensagem(res.mensagem, 'aviso');
@@ -322,15 +343,27 @@ function App() {
             </div>
           </div>
         </div>
+
+        {/* ✅ SE ESTÁ CARREGANDO, MOSTRA SKELETON; SE CARREGOU E TEM IMAGEM, MOSTRA IMAGEM */}
+        {gameAtual && !imageLoaded ? (
+          <SkeletonGameCard />
+        ) : null}
+
         {gameAtual?.imagem && (
           <div className={styles['sp-game-card']}>
             <div className={styles['sp-img-frame']}>
-              <img src={gameAtual.imagem} alt={gameAtual.nome} />
+              <img 
+                src={gameAtual.imagem} 
+                alt={gameAtual.nome}
+                onLoad={handleImageLoad}
+                style={{ display: imageLoaded ? 'block' : 'none' }}
+              />
               <div className={styles['sp-img-overlay']} />
               <p className={styles['sp-game-name']}>🎮 {gameAtual.nome}</p>
             </div>
           </div>
         )}
+
         {gameAtual && !enviarBloqueado && (
           <button
             className={`${styles['sp-btn']} ${styles['sp-btn-green']}`}

@@ -972,4 +972,58 @@ input, textarea {
   }
 }
 
+/* ✅ SKELETON LOADER */
+.sp-skeleton-img {
+  width: 100%;
+  height: 300px;
+  background: linear-gradient(
+    90deg,
+    #2a2a3e 0%,
+    #3a3a4e 50%,
+    #2a2a3e 100%
+  );
+  background-size: 200% 100%;
+  animation: sp-skeleton-loading 1.5s infinite;
+  border-radius: 4px;
+}
 
+.sp-skeleton-text {
+  width: 70%;
+  height: 24px;
+  background: linear-gradient(
+    90deg,
+    #2a2a3e 0%,
+    #3a3a4e 50%,
+    #2a2a3e 100%
+  );
+  background-size: 200% 100%;
+  animation: sp-skeleton-loading 1.5s infinite;
+  border-radius: 4px;
+  margin-top: 12px;
+}
+
+@keyframes sp-skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Garante que imagem só aparece quando carregada */
+.sp-img-frame img {
+  width: 100%;
+  height: auto;
+  display: block !important;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
