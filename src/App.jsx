@@ -174,7 +174,8 @@ function App() {
       res.url = url;
       setGameAtual(res);
       
-      // ✅ Skeleton já está aparecendo, agora carrega a imagem
+      // ✅ Se tem imagem, continua com imageLoading=true para carregar
+      // Se não tem imagem, desativa o loading
       if (res.imagem) {
         setImageLoading(true);
       } else {
@@ -192,9 +193,12 @@ function App() {
     }
   };
 
-  // ✅ Quando a imagem REALMENTE carrega
+  // ✅ Quando a imagem REALMENTE carrega - com graceful transition
   const handleImageLoad = () => {
-    setImageLoading(false);
+    // Aguarda um pouco para a transição suave
+    setTimeout(() => {
+      setImageLoading(false);
+    }, 100);
   };
 
   // ✅ Quando a imagem falha em carregar, para o skeleton
@@ -383,24 +387,29 @@ function App() {
           </div>
         </div>
 
-        {/* ✅ MOSTRA SKELETON ENQUANTO imageLoading FOR TRUE */}
+        {/* ✅ MOSTRA SKELETON ENQUANTO imageLoading FOR TRUE COM TRANSIÇÃO */}
         {imageLoading && gameAtual ? (
-          <SkeletonGameCard />
+          <div className={styles['sp-skeleton-wrapper']}>
+            <SkeletonGameCard />
+          </div>
         ) : null}
 
-        {/* ✅ MOSTRA IMAGEM REAL QUANDO NÃO ESTÁ CARREGANDO */}
+        {/* ✅ MOSTRA IMAGEM REAL QUANDO NÃO ESTÁ CARREGANDO COM GRACEFUL TRANSITION */}
         {gameAtual?.imagem && !imageLoading && (
-          <div className={styles['sp-game-card']}>
-            <div className={styles['sp-img-frame']}>
-              <img 
-                ref={imgRef}
-                src={gameAtual.imagem} 
-                alt={gameAtual.nome}
-                onLoad={handleImageLoad}
-                onError={handleImageError}
-              />
-              <div className={styles['sp-img-overlay']} />
-              <p className={styles['sp-game-name']}>🎮 {gameAtual.nome}</p>
+          <div className={styles['sp-game-card-wrapper']}>
+            <div className={styles['sp-game-card']}>
+              <div className={styles['sp-img-frame']}>
+                <img 
+                  ref={imgRef}
+                  src={gameAtual.imagem} 
+                  alt={gameAtual.nome}
+                  onLoad={handleImageLoad}
+                  onError={handleImageError}
+                  className={styles['sp-game-image']}
+                />
+                <div className={styles['sp-img-overlay']} />
+                <p className={styles['sp-game-name']}>🎮 {gameAtual.nome}</p>
+              </div>
             </div>
           </div>
         )}
