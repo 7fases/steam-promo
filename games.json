@@ -887,7 +887,7 @@
   {
     "nome": "STREET FIGHTER V: CHAMPION EDITION+",
     "url": "https://store.steampowered.com/sub/869052/",
-    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/310950/header.jpg?t=1759109525"
+    "imagem": "https://shared.fastly.steamstatic.com/store_item_assets/steam/subs/869052/header.jpg?t=1684202800"
   },
   {
     "nome": "Street Fighter 6",
@@ -2091,7 +2091,7 @@
   },
   {
     "nome": "Remnant 2 Ultimate Edition",
-    "url": "https://store.steampowered.com/app/1282100/REMNANT_II/",
+    "url": "https://store.steampowered.com/sub/855024",
     "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1282100/header.jpg?t=1764659459"
   },
   {
@@ -2232,7 +2232,7 @@
   {
     "nome": "Diablo IV: Age of Hatred Collection",
     "url": "https://store.steampowered.com/sub/1390267/",
-    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2344520/80f21a42e378b93e8fbb68ee43103be8ab84891b/header.jpg?t=1770248542"
+    "imagem": "https://shared.fastly.steamstatic.com/store_item_assets/steam/subs/1390267/795e6074cb53b70256f68a34776be7ff6f4cd2d3/header.jpg?t=1765512057"
   },
   {
     "nome": "The Legend of Heroes: Trails through Daybreak",
@@ -2278,5 +2278,70 @@
     "nome": "God of Weapons Game + DLC",
     "url": "https://store.steampowered.com/bundle/54044",
     "imagem": "https://shared.fastly.steamstatic.com/store_item_assets/steam/bundles/54044/89qd58rz691q9avi/f09ce727cd273abc756bdb420f19783f3cecbefd/header_ratio.jpg?t=1747367428"
+  },
+  {
+    "nome": "ELDEN RING Shadow of the Erdtree Edition",
+    "url": "https://store.steampowered.com/sub/1010505",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/subs/1010505/c590abe17785b48b25190685ccca24ea6bbd658c/header.jpg?t=1741302182"
+  },
+  {
+    "nome": "Until Then",
+    "url": "https://store.steampowered.com/app/1574820",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1574820/header.jpg?t=1772218814"
+  },
+  {
+    "nome": "Two Point Museum",
+    "url": "https://store.steampowered.com/app/2185060",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2185060/f518d1aa2754296e280ba3fe0d2bd4392fa6e3eb/header.jpg?t=1766076962"
+  },
+  {
+    "nome": "Kingdom Come: Deliverance II",
+    "url": "https://store.steampowered.com/app/1771300",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1771300/header.jpg?t=1769507535"
+  },
+  {
+    "nome": "StarRupture",
+    "url": "https://store.steampowered.com/app/1631270",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1631270/header.jpg?t=1770281671"
+  },
+  {
+    "nome": "The Rogue Prince of Persia",
+    "url": "https://store.steampowered.com/app/2717880",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2717880/60249410daa51cc5e6cac5b32cafb369c44937e5/header.jpg?t=1770066280"
+  },
+  {
+    "nome": "Mighty Morphin Power Rangers",
+    "url": "https://store.steampowered.com/app/2816870",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2816870/header.jpg?t=1733852000"
+  },
+  {
+    "nome": "Monsters are Coming! Rock & Road",
+    "url": "https://store.steampowered.com/app/2934220",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2934220/8ee84bf0efc9f7950ef6147a015babedecaf64eb/header.jpg?t=1768224261"
+  },
+  {
+    "nome": "UnderMine 2",
+    "url": "https://store.steampowered.com/app/1869780",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1869780/80f5a36a6bc4d67376cfd3cb912b79dd647bb3d2/header_alt_assets_0.jpg?t=1771867588"
+  },
+  {
+    "nome": "Windblown",
+    "url": "https://store.steampowered.com/app/1911610",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1911610/e888fc3bd015016492f86ad87e21cbaea1d289e9/header.jpg?t=1765357713"
+  },
+  {
+    "nome": "LEGO Party!",
+    "url": "https://store.steampowered.com/app/1969370",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1969370/bdd135d96ca368b1e1cb4f221052adcd0cfbff61/header.jpg?t=1771008066"
+  },
+  {
+    "nome": "Tom Clancy’s The Division 2 Gold Edition",
+    "url": "https://store.steampowered.com/sub/1260348",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2221490/header.jpg?t=1772217895"
+  },
+  {
+    "nome": "Tom Clancy’s The Division 2 Ultimate Edition",
+    "url": "https://store.steampowered.com/sub/1260380",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2221490/header.jpg?t=1772217895"
   }
 ]
