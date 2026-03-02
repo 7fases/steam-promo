@@ -1035,7 +1035,7 @@ input, textarea {
 
 /* ✅ GRACEFUL TRANSITION - Skeleton para Imagem */
 .sp-skeleton-wrapper {
-  animation: sp-skeleton-fadeIn 0.3s ease-in-out;
+  animation: sp-skeleton-fadeIn 0.6s ease-in-out;
 }
 
 @keyframes sp-skeleton-fadeIn {
@@ -1048,7 +1048,7 @@ input, textarea {
 }
 
 .sp-game-card-wrapper {
-  animation: sp-image-fadeIn 0.4s ease-in-out;
+  animation: sp-image-fadeIn 0.6s ease-in-out;
 }
 
 @keyframes sp-image-fadeIn {
@@ -1063,7 +1063,7 @@ input, textarea {
 }
 
 .sp-game-image {
-  animation: sp-image-load 0.5s ease-in-out;
+  animation: sp-image-load 0.8s ease-in-out;
 }
 
 @keyframes sp-image-load {
