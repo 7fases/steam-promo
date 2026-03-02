@@ -110,8 +110,7 @@ function MessageBubble({ mensagem, onExiting }) {
 function App() {
   const [url, setUrl] = useState('');
   const [gameAtual, setGameAtual] = useState(null);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [showSkeleton, setShowSkeleton] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
   const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
   const [loading, setLoading] = useState(false);
   const [enviarBloqueado, setEnviarBloqueado] = useState(false);
@@ -121,6 +120,7 @@ function App() {
   const [modalLoading, setModalLoading] = useState(false);
   const [hasLoadedGames, setHasLoadedGames] = useState(false);
   const modalRef = useRef(null);
+  const imgRef = useRef(null);
 
   const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
 
@@ -138,8 +138,7 @@ function App() {
     
     mostrarMensagem('⏳ Buscando dados...', 'info');
     setLoading(true);
-    setShowSkeleton(true); // ✅ Mostra skeleton IMEDIATAMENTE
-    setImageLoaded(false);
+    setImageLoading(false); // Reset
     setEnviarBloqueado(false);
     setGameAtual(null);
     
@@ -151,11 +150,16 @@ function App() {
       });
       const res = await response.json();
       if (!response.ok || res.status !== 'ok') {
-        setShowSkeleton(false); // ✅ Para o skeleton em caso de erro
         throw new Error(res.mensagem || 'Erro ao buscar jogo');
       }
       res.url = url;
       setGameAtual(res);
+      
+      // ✅ Mostra skeleton e começa a carregar imagem
+      if (res.imagem) {
+        setImageLoading(true);
+      }
+      
       mostrarMensagem('✅ Jogo encontrado!', 'sucesso');
       setUrl('');
     } catch (error) {
@@ -165,10 +169,13 @@ function App() {
     }
   };
 
-  // ✅ Quando a imagem carrega, para o skeleton
+  // ✅ Quando a imagem REALMENTE carrega
   const handleImageLoad = () => {
-    setImageLoaded(true);
-    setShowSkeleton(false);
+    setImageLoading(false); // Para o skeleton
+  };
+
+  const handleImageError = () => {
+    setImageLoading(false); // Para o skeleton mesmo em erro
   };
 
   const enviar = async () => {
@@ -193,8 +200,7 @@ function App() {
         if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
         setGameAtual(null);
         setUrl('');
-        setImageLoaded(false);
-        setShowSkeleton(false);
+        setImageLoading(false);
         setEnviarBloqueado(false);
       } else if (res.status === 'existe') {
         mostrarMensagem(res.mensagem, 'aviso');
@@ -353,19 +359,21 @@ function App() {
           </div>
         </div>
 
-        {/* ✅ MOSTRA SKELETON ENQUANTO showSkeleton FOR TRUE */}
-        {showSkeleton ? (
+        {/* ✅ MOSTRA SKELETON ENQUANTO imageLoading FOR TRUE */}
+        {imageLoading && gameAtual ? (
           <SkeletonGameCard />
         ) : null}
 
-        {/* ✅ MOSTRA IMAGEM REAL QUANDO CARREGOU */}
-        {gameAtual?.imagem && imageLoaded && (
+        {/* ✅ MOSTRA IMAGEM REAL QUANDO NÃO ESTÁ CARREGANDO */}
+        {gameAtual?.imagem && !imageLoading && (
           <div className={styles['sp-game-card']}>
             <div className={styles['sp-img-frame']}>
               <img 
+                ref={imgRef}
                 src={gameAtual.imagem} 
                 alt={gameAtual.nome}
                 onLoad={handleImageLoad}
+                onError={handleImageError}
               />
               <div className={styles['sp-img-overlay']} />
               <p className={styles['sp-game-name']}>🎮 {gameAtual.nome}</p>
@@ -373,18 +381,14 @@ function App() {
           </div>
         )}
 
-        {/* ✅ CARREGA IMAGEM INVISÍVEL (para disparar onLoad) */}
-        {gameAtual?.imagem && !imageLoaded && (
+        {/* ✅ TAG INVISÍVEL PARA PRÉ-CARREGAR A IMAGEM */}
+        {gameAtual?.imagem && imageLoading && (
           <img 
             src={gameAtual.imagem} 
             alt="preload"
             style={{ display: 'none' }}
             onLoad={handleImageLoad}
-            onError={() => {
-              // Se der erro na imagem, para o skeleton
-              setShowSkeleton(false);
-              setImageLoaded(true);
-            }}
+            onError={handleImageError}
           />
         )}
 
