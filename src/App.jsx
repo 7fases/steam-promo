@@ -7,6 +7,7 @@ import errorMp3 from './assets/error.mp3';
 import entrouMp3 from './assets/entrou.mp3';
 import { SkeletonGamesList } from './SkeletonLoader';
 
+
 // Particles canvas
 function Particles() {
   const canvasRef = useRef(null);
@@ -390,6 +391,8 @@ function App() {
             </div>
           </div>
         </div>
+
+        
 
         {/* ✅ MOSTRA SKELETON ENQUANTO imageLoading FOR TRUE COM TRANSIÇÃO */}
         {imageLoading && gameAtual ? (
