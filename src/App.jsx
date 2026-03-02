@@ -111,7 +111,6 @@ function App() {
   const [url, setUrl] = useState('');
   const [gameAtual, setGameAtual] = useState(null);
   const [imageLoading, setImageLoading] = useState(false);
-  const [pixelRevealing, setPixelRevealing] = useState(false);
   const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
   const [loading, setLoading] = useState(false);
   const [enviarBloqueado, setEnviarBloqueado] = useState(false);
@@ -194,14 +193,12 @@ function App() {
     }
   };
 
-  // ✅ Quando a imagem REALMENTE carrega - com pixel reveal 8-bit
+  // ✅ Quando a imagem REALMENTE carrega - com graceful transition
   const handleImageLoad = () => {
-    setPixelRevealing(true);
-    setImageLoading(false);
-    // Remove pixel reveal class after animation completes
+    // Aguarda um pouco para a transição suave
     setTimeout(() => {
-      setPixelRevealing(false);
-    }, 1300);
+      setImageLoading(false);
+    }, 100);
   };
 
   // ✅ Quando a imagem falha em carregar, para o skeleton
@@ -248,7 +245,6 @@ function App() {
   };
 
   const fetchGames = async () => {
-    setModalLoading(true);
     try {
       const response = await fetch(
         'https://cdn.jsdelivr.net/gh/7fases/steam-promo@main/games.json',
@@ -263,20 +259,18 @@ function App() {
         throw new Error(`HTTP ${response.status}: Arquivo não encontrado`);
       }
 
-      const games = await response.json();
+      const gamesData = await response.json();
 
-      if (!Array.isArray(games)) {
+      if (!Array.isArray(gamesData)) {
         throw new Error('Formato de dados inválido');
       }
 
-      setGames(games);
+      setGames(gamesData);
       setHasLoadedGames(true);
     } catch (error) {
       console.error('❌ Erro ao carregar games:', error);
       mostrarMensagem(`❌ Erro ao carregar games: ${error.message}`, 'erro');
       setGames([]);
-    } finally {
-      setModalLoading(false);
     }
   };
 
@@ -312,6 +306,13 @@ function App() {
     if (navigator.vibrate) navigator.vibrate(50);
     action();
   };
+
+  // Preload games on component mount
+  useEffect(() => {
+    fetchGames();
+  }, []);
+
+  const buttonText = games.length > 0 ? `${games.length} Games Cadastrados` : 'Games Cadastrados';
 
   return (
     <div className={styles['sp-wrap']}>
@@ -397,9 +398,9 @@ function App() {
           </div>
         ) : null}
 
-        {/* ✅ MOSTRA IMAGEM REAL QUANDO NÃO ESTÁ CARREGANDO COM PIXEL REVEAL 8-BIT */}
+        {/* ✅ MOSTRA IMAGEM REAL QUANDO NÃO ESTÁ CARREGANDO COM GRACEFUL TRANSITION */}
         {gameAtual?.imagem && !imageLoading && (
-          <div className={`${styles['sp-game-card-wrapper']} ${pixelRevealing ? styles['sp-pixel-revealing'] : ''}`}>
+          <div className={styles['sp-game-card-wrapper']}>
             <div className={styles['sp-game-card']}>
               <div className={styles['sp-img-frame']}>
                 <img 
@@ -408,9 +409,8 @@ function App() {
                   alt={gameAtual.nome}
                   onLoad={handleImageLoad}
                   onError={handleImageError}
-                  className={`${styles['sp-game-image']} ${pixelRevealing ? styles['sp-pixel-reveal'] : ''}`}
+                  className={styles['sp-game-image']}
                 />
-                {pixelRevealing && <div className={styles['sp-pixel-scan-line']} />}
                 <div className={styles['sp-img-overlay']} />
                 <p className={styles['sp-game-name']}>🎮 {gameAtual.nome}</p>
               </div>
@@ -448,7 +448,7 @@ function App() {
             className={styles['sp-btn-float-games-mobile']}
             onClick={() => handleVibrateClick(openModal)}
           >
-            🎮 Games Cadastrados
+            {buttonText}
           </button>
         </footer>
 
@@ -459,7 +459,7 @@ function App() {
           className={styles['sp-btn-float-games-desktop']}
           onClick={() => handleVibrateClick(openModal)}
         >
-          🎮 Games Cadastrados
+          {buttonText}
         </button>
       </div>
       {isModalOpen && (
