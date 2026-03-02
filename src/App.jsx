@@ -111,6 +111,7 @@ function App() {
   const [url, setUrl] = useState('');
   const [gameAtual, setGameAtual] = useState(null);
   const [imageLoading, setImageLoading] = useState(false);
+  const [pixelRevealing, setPixelRevealing] = useState(false);
   const [mensagem, setMensagem] = useState({ texto: '', tipo: '' });
   const [loading, setLoading] = useState(false);
   const [enviarBloqueado, setEnviarBloqueado] = useState(false);
@@ -193,12 +194,14 @@ function App() {
     }
   };
 
-  // ✅ Quando a imagem REALMENTE carrega - com graceful transition
+  // ✅ Quando a imagem REALMENTE carrega - com pixel reveal 8-bit
   const handleImageLoad = () => {
-    // Aguarda um pouco para a transição suave
+    setPixelRevealing(true);
+    setImageLoading(false);
+    // Remove pixel reveal class after animation completes
     setTimeout(() => {
-      setImageLoading(false);
-    }, 100);
+      setPixelRevealing(false);
+    }, 1300);
   };
 
   // ✅ Quando a imagem falha em carregar, para o skeleton
@@ -394,9 +397,9 @@ function App() {
           </div>
         ) : null}
 
-        {/* ✅ MOSTRA IMAGEM REAL QUANDO NÃO ESTÁ CARREGANDO COM GRACEFUL TRANSITION */}
+        {/* ✅ MOSTRA IMAGEM REAL QUANDO NÃO ESTÁ CARREGANDO COM PIXEL REVEAL 8-BIT */}
         {gameAtual?.imagem && !imageLoading && (
-          <div className={styles['sp-game-card-wrapper']}>
+          <div className={`${styles['sp-game-card-wrapper']} ${pixelRevealing ? styles['sp-pixel-revealing'] : ''}`}>
             <div className={styles['sp-game-card']}>
               <div className={styles['sp-img-frame']}>
                 <img 
@@ -405,8 +408,9 @@ function App() {
                   alt={gameAtual.nome}
                   onLoad={handleImageLoad}
                   onError={handleImageError}
-                  className={styles['sp-game-image']}
+                  className={`${styles['sp-game-image']} ${pixelRevealing ? styles['sp-pixel-reveal'] : ''}`}
                 />
+                {pixelRevealing && <div className={styles['sp-pixel-scan-line']} />}
                 <div className={styles['sp-img-overlay']} />
                 <p className={styles['sp-game-name']}>🎮 {gameAtual.nome}</p>
               </div>
@@ -444,7 +448,7 @@ function App() {
             className={styles['sp-btn-float-games-mobile']}
             onClick={() => handleVibrateClick(openModal)}
           >
-            Games Cadastrados
+            🎮 Games Cadastrados
           </button>
         </footer>
 
@@ -455,7 +459,7 @@ function App() {
           className={styles['sp-btn-float-games-desktop']}
           onClick={() => handleVibrateClick(openModal)}
         >
-          Games Cadastrados
+          🎮 Games Cadastrados
         </button>
       </div>
       {isModalOpen && (
