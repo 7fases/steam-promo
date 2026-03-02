@@ -137,7 +137,7 @@ function App() {
       return;
     }
     
-    // ✅ Mostra skeleton IMEDIATAMENTE ao clicar em buscar (antes mesmo de fazer requisição)
+    // ✅ Mostra skeleton IMEDIATAMENTE ao clicar em buscar
     setGameAtual({ nome: '', imagem: '', id: '', tipo: '' });
     setImageLoading(true);
     
@@ -152,11 +152,14 @@ function App() {
         body: JSON.stringify({ acao: 'buscar', url }),
       });
       const res = await response.json();
+      
+      // ✅ Se der erro, para o skeleton e limpa tudo
       if (!response.ok || res.status !== 'ok') {
         setGameAtual(null);
         setImageLoading(false);
         throw new Error(res.mensagem || 'Erro ao buscar jogo');
       }
+      
       res.url = url;
       setGameAtual(res);
       
@@ -170,6 +173,8 @@ function App() {
       mostrarMensagem('✅ Jogo encontrado!', 'sucesso');
       setUrl('');
     } catch (error) {
+      // ✅ Garante que para o skeleton em caso de erro
+      setImageLoading(false);
       mostrarMensagem(`❌ ${error.message}`, 'erro');
     } finally {
       setLoading(false);
@@ -178,11 +183,12 @@ function App() {
 
   // ✅ Quando a imagem REALMENTE carrega
   const handleImageLoad = () => {
-    setImageLoading(false); // Para o skeleton
+    setImageLoading(false);
   };
 
+  // ✅ Quando a imagem falha em carregar, para o skeleton
   const handleImageError = () => {
-    setImageLoading(false); // Para o skeleton mesmo em erro
+    setImageLoading(false);
   };
 
   const enviar = async () => {
