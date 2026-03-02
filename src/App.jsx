@@ -121,6 +121,7 @@ function App() {
   const [hasLoadedGames, setHasLoadedGames] = useState(false);
   const modalRef = useRef(null);
   const imgRef = useRef(null);
+  const canvasRef = useRef(null); // ✅ NOVO: Ref para o canvas da pixel reveal
 
   const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
 
@@ -193,11 +194,63 @@ function App() {
     }
   };
 
-  // ✅ Quando a imagem REALMENTE carrega - com graceful transition
+  // ✅ Quando a imagem REALMENTE carrega - inicia a pixel reveal no canvas
   const handleImageLoad = () => {
-    // Aguarda um pouco para a transição suave
+    // Aguarda um pouco para transição suave do skeleton
     setTimeout(() => {
       setImageLoading(false);
+      
+      // ✅ Inicia a animação pixel reveal no canvas
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const img = imgRef.current;
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = false; // ✅ Pixelated durante reveal (8-bit feel)
+
+      const blockSize = 8; // ✅ Tamanho do "pixel block" pra estilo 8-bit
+      const cols = Math.ceil(canvas.width / blockSize);
+      const rows = Math.ceil(canvas.height / blockSize);
+
+      // Cria array de blocos e shuffle pra reveal random
+      const blocks = [];
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          blocks.push({ x, y });
+        }
+      }
+      blocks.sort(() => Math.random() - 0.5); // ✅ Random order pra "forming" orgânico
+
+      let index = 0;
+      const drawBlock = () => {
+        // Desenha 10 blocos por frame pra performance (leve em mobile)
+        for (let i = 0; i < 10; i++) {
+          if (index >= blocks.length) {
+            // ✅ Final: Desenha imagem full smooth
+            ctx.imageSmoothingEnabled = true;
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            return;
+          }
+
+          const { x, y } = blocks[index];
+          const w = Math.min(blockSize, canvas.width - x * blockSize);
+          const h = Math.min(blockSize, canvas.height - y * blockSize);
+
+          ctx.drawImage(
+            img,
+            x * blockSize, y * blockSize, w, h,
+            x * blockSize, y * blockSize, w, h
+          );
+
+          index++;
+        }
+
+        requestAnimationFrame(drawBlock); // ✅ Leve e smooth
+      };
+
+      drawBlock();
     }, 100);
   };
 
@@ -394,17 +447,14 @@ function App() {
           </div>
         ) : null}
 
-        {/* ✅ MOSTRA IMAGEM REAL QUANDO NÃO ESTÁ CARREGANDO COM GRACEFUL TRANSITION */}
+        {/* ✅ MOSTRA CANVAS COM PIXEL REVEAL QUANDO NÃO ESTÁ CARREGANDO */}
         {gameAtual?.imagem && !imageLoading && (
           <div className={styles['sp-game-card-wrapper']}>
             <div className={styles['sp-game-card']}>
               <div className={styles['sp-img-frame']}>
-                <img 
-                  ref={imgRef}
-                  src={gameAtual.imagem} 
-                  alt={gameAtual.nome}
-                  onLoad={handleImageLoad}
-                  onError={handleImageError}
+                {/* ✅ MELHORIA: Canvas com pixel reveal em vez de img simples */}
+                <canvas
+                  ref={canvasRef}
                   className={styles['sp-game-image']}
                 />
                 <div className={styles['sp-img-overlay']} />
@@ -417,6 +467,7 @@ function App() {
         {/* ✅ TAG INVISÍVEL PARA PRÉ-CARREGAR A IMAGEM */}
         {gameAtual?.imagem && imageLoading && (
           <img 
+            ref={imgRef}
             src={gameAtual.imagem} 
             alt="preload"
             style={{ display: 'none' }}
