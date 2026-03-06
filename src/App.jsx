@@ -350,7 +350,7 @@ function App() {
               <img src={telegramIcon} alt="Telegram" width="20" height="20" />
               <span>Telegram</span>
             </a>
-            <a href="https://discord.com/invite/GjpMBK3kA6" target="_blank" rel="noopener noreferrer" className={`${styles['sp-sbtn']} ${styles['sp-dc']}`}>
+            <a href="https://discord.gg/M2sph4A9Y9" target="_blank" rel="noopener noreferrer" className={`${styles['sp-sbtn']} ${styles['sp-dc']}`}>
               <img src={discordIcon} alt="Discord" width="20" height="20" />
               <span>Discord</span>
             </a>
