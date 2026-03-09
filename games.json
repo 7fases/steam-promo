@@ -1765,7 +1765,7 @@
     "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2142790/5bb0938ddc2921aa1856ff1678886bee1b1aa9e6/header_alt_assets_3.jpg?t=1771865130"
   },
   {
-    "nome": "Parkitect Deluxe\r",
+    "nome": "Parkitect Deluxe",
     "url": "https://store.steampowered.com/bundle/12707/Parkitect_Deluxe/",
     "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/453090/header.jpg?t=1771883665"
   },
@@ -2225,11 +2225,6 @@
     "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1374490/a3e75918e979b6c5f51264be694efb0597e99879/header.jpg?t=1765818039"
   },
   {
-    "nome": "Wizard of Legend 2",
-    "url": "https://store.steampowered.com/app/2193540/Wizard_of_Legend_2/",
-    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2193540/header.jpg?t=1755717024"
-  },
-  {
     "nome": "Diablo IV: Age of Hatred Collection",
     "url": "https://store.steampowered.com/sub/1390267/",
     "imagem": "https://shared.fastly.steamstatic.com/store_item_assets/steam/subs/1390267/795e6074cb53b70256f68a34776be7ff6f4cd2d3/header.jpg?t=1765512057"
@@ -2267,7 +2262,7 @@
   {
     "nome": "Tom Clancy’s The Division 2",
     "url": "https://store.steampowered.com/app/2221490",
-    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2221490/header.jpg?t=1772217895"
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2221490/688600b8d0844e3e065afc651ac773c623b05d7d/header_alt_assets_2.jpg?t=1772557241"
   },
   {
     "nome": "STAR WARS Jedi: Survivor",
@@ -2277,7 +2272,7 @@
   {
     "nome": "God of Weapons Game + DLC",
     "url": "https://store.steampowered.com/bundle/54044",
-    "imagem": "https://shared.fastly.steamstatic.com/store_item_assets/steam/bundles/54044/89qd58rz691q9avi/f09ce727cd273abc756bdb420f19783f3cecbefd/header_ratio.jpg?t=1747367428"
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/bundles/54044/89qd58rz691q9avi/f09ce727cd273abc756bdb420f19783f3cecbefd/header_ratio.jpg?t=1747367428"
   },
   {
     "nome": "ELDEN RING Shadow of the Erdtree Edition",
@@ -2337,16 +2332,51 @@
   {
     "nome": "Tom Clancy’s The Division 2 Gold Edition",
     "url": "https://store.steampowered.com/sub/1260348",
-    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2221490/header.jpg?t=1772217895"
+    "imagem": "https://cdn.cloudflare.steamstatic.com/steam/apps/2221490/header.jpg"
   },
   {
     "nome": "Tom Clancy’s The Division 2 Ultimate Edition",
     "url": "https://store.steampowered.com/sub/1260380",
-    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2221490/header.jpg?t=1772217895"
+    "imagem": "https://cdn.cloudflare.steamstatic.com/steam/apps/2221490/header.jpg"
   },
   {
     "nome": "Cyberpunk 2077: Phantom Liberty",
     "url": "https://store.steampowered.com/app/2138330",
     "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2138330/bdbeea292270b8cd9dde1f2044a411624db58657/header.jpg?t=1768305060"
+  },
+  {
+    "nome": "The Alters",
+    "url": "https://store.steampowered.com/app/1601570/",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1601570/747c8afb80fc4f5014df829b7df0ab1eaea864ac/header_alt_assets_4.jpg?t=1771514526"
+  },
+  {
+    "nome": "Ori: The Collection",
+    "url": "https://store.steampowered.com/bundle/18725/",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/bundles/18725/wile4vssgt7s9s6f/header_ratio.jpg?t=1612857958"
+  },
+  {
+    "nome": "The Spell Brigade",
+    "url": "https://store.steampowered.com/app/2904000/",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2904000/1e137b999c5c05ce7df67076c474b26f9d4bdf82/header.jpg?t=1769677852"
+  },
+  {
+    "nome": "Coral Island",
+    "url": "https://store.steampowered.com/app/1158160",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1158160/header.jpg?t=1770793012"
+  },
+  {
+    "nome": "Halls of Torment",
+    "url": "https://store.steampowered.com/app/2218750",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2218750/header.jpg?t=1761660851"
+  },
+  {
+    "nome": "Slay the Spire 2",
+    "url": "https://store.steampowered.com/app/2868840",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2868840/b0958d387dc366211e0f353443710cfcf9fdb020/header.jpg?t=1772736015"
+  },
+  {
+    "nome": "METAL GEAR SOLID V: The Definitive Experience",
+    "url": "https://store.steampowered.com/sub/132479",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/subs/132479/header.jpg?t=1653977022"
   }
 ]
