@@ -1,13 +1,11 @@
 // App.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import styles from './App.module.css';
 import telegramIcon from './assets/telegram.svg';
 import discordIcon from './assets/discord.svg';
 import errorMp3 from './assets/error.mp3';
 import entrouMp3 from './assets/entrou.mp3';
 import { SkeletonGamesList } from './SkeletonLoader';
-
-
 // Particles canvas
 function Particles() {
   const canvasRef = useRef(null);
@@ -67,7 +65,6 @@ function Particles() {
   }, []);
   return <canvas ref={canvasRef} className={styles['sp-canvas']} />;
 }
-
 // ✅ SKELETON LOADER PARA IMAGEM
 function SkeletonGameCard() {
   return (
@@ -80,7 +77,6 @@ function SkeletonGameCard() {
     </div>
   );
 }
-
 function MessageBubble({ mensagem, onExiting }) {
   const [isExiting, setIsExiting] = useState(false);
   useEffect(() => {
@@ -107,7 +103,6 @@ function MessageBubble({ mensagem, onExiting }) {
     </div>
   );
 }
-
 function App() {
   const [url, setUrl] = useState('');
   const [gameAtual, setGameAtual] = useState(null);
@@ -116,36 +111,48 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [enviarBloqueado, setEnviarBloqueado] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalClosing, setIsModalClosing] = useState(false);
   const [games, setGames] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [modalLoading, setModalLoading] = useState(false);
   const [hasLoadedGames, setHasLoadedGames] = useState(false);
+  const [shimmerMinReady, setShimmerMinReady] = useState(false);
+  const [shimmerKey, setShimmerKey] = useState(0);
   const modalRef = useRef(null);
+  const listRef = useRef(null);
   const imgRef = useRef(null);
-
   const steamRegex = /store\.steampowered\.com\/(app|sub|bundle|package)\/(\d+)/i;
-
+  // ✅ Debounce na busca (300ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setShimmerKey(prev => prev + 1);
+      // ✅ Scroll suave ao topo ao buscar
+      if (listRef.current) {
+        listRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
   const mostrarMensagem = (texto, tipo = 'info', playSound = false) => {
     setMensagem({ texto, tipo });
     if (tipo === 'erro') new Audio(errorMp3).play();
     else if (playSound && tipo === 'sucesso') new Audio(entrouMp3).play();
   };
-
   const buscar = async () => {
-    // ✅ Valida URL IMEDIATAMENTE
     if (!url.match(steamRegex)) {
       mostrarMensagem('⚠️ URL inválida! Insira uma URL da Steam.', 'erro');
       return;
     }
-    
-    // ✅ Mostra skeleton IMEDIATAMENTE ao clicar em buscar
+   
     setGameAtual({ nome: '', imagem: '', id: '', tipo: '' });
     setImageLoading(true);
-    
+   
     mostrarMensagem('⏳ Buscando dados...', 'info');
     setLoading(true);
     setEnviarBloqueado(false);
-    
+   
     try {
       const response = await fetch('https://steam-promo.vercel.app/api/google', {
         method: 'POST',
@@ -153,8 +160,7 @@ function App() {
         body: JSON.stringify({ acao: 'buscar', url }),
       });
       const res = await response.json();
-      
-      // ✅ Se for gratuito, mostra alerta amarelo e bloqueia
+     
       if (res.status === 'gratuito') {
         setGameAtual(null);
         setImageLoading(false);
@@ -164,49 +170,39 @@ function App() {
         setLoading(false);
         return;
       }
-      
-      // ✅ Se der erro, para o skeleton e limpa tudo
+     
       if (!response.ok || res.status !== 'ok') {
         setGameAtual(null);
         setImageLoading(false);
         throw new Error(res.mensagem || 'Erro ao buscar jogo');
       }
-      
+     
       res.url = url;
       setGameAtual(res);
-      
-      // ✅ Se tem imagem, continua com imageLoading=true para carregar
-      // Se não tem imagem, desativa o loading
+     
       if (res.imagem) {
         setImageLoading(true);
       } else {
         setImageLoading(false);
       }
-      
+     
       mostrarMensagem('✅ Jogo encontrado!', 'sucesso');
       setUrl('');
     } catch (error) {
-      // ✅ Garante que para o skeleton em caso de erro
       setImageLoading(false);
       mostrarMensagem(`❌ ${error.message}`, 'erro');
     } finally {
       setLoading(false);
     }
   };
-
-  // ✅ Quando a imagem REALMENTE carrega - com graceful transition
   const handleImageLoad = () => {
-    // Aguarda um pouco para a transição suave
     setTimeout(() => {
       setImageLoading(false);
     }, 100);
   };
-
-  // ✅ Quando a imagem falha em carregar, para o skeleton
   const handleImageError = () => {
     setImageLoading(false);
   };
-
   const enviar = async () => {
     if (!gameAtual) return;
     mostrarMensagem('⏳ Enviando sugestão...', 'info');
@@ -244,78 +240,74 @@ function App() {
       setLoading(false);
     }
   };
-
-const fetchGames = async () => {
-  try {
-    const response = await fetch(
-      'https://cdn.jsdelivr.net/gh/7fases/steam-promo@main/games.json',
-      {
-        headers: {
-          'Accept': 'application/json',
-        },
-        cache: 'no-cache'  // Adicione isso aqui
+  const fetchGames = async () => {
+    try {
+      const response = await fetch(
+        'https://cdn.jsdelivr.net/gh/7fases/steam-promo@main/games.json',
+        {
+          headers: { 'Accept': 'application/json' },
+          cache: 'no-cache'
+        }
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: Arquivo não encontrado`);
       }
-    );
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: Arquivo não encontrado`);
+      const gamesData = await response.json();
+      if (!Array.isArray(gamesData)) {
+        throw new Error('Formato de dados inválido');
+      }
+      setGames(gamesData);
+      setHasLoadedGames(true);
+    } catch (error) {
+      console.error('❌ Erro ao carregar games:', error);
+      mostrarMensagem(`❌ Erro ao carregar games: ${error.message}`, 'erro');
+      setGames([]);
     }
-
-    const gamesData = await response.json();
-
-    if (!Array.isArray(gamesData)) {
-      throw new Error('Formato de dados inválido');
-    }
-
-    setGames(gamesData);
-    setHasLoadedGames(true);
-  } catch (error) {
-    console.error('❌ Erro ao carregar games:', error);
-    mostrarMensagem(`❌ Erro ao carregar games: ${error.message}`, 'erro');
-    setGames([]);
-  }
-};
-
+  };
   const openModal = async () => {
     setIsModalOpen(true);
+    setIsModalClosing(false);
     setSearchTerm('');
+    setDebouncedSearch('');
     setModalLoading(true);
-
     await new Promise(resolve => setTimeout(resolve, 600));
-
     if (!hasLoadedGames) {
       await fetchGames();
     }
-
     setModalLoading(false);
   };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-  };
-
+  // ✅ Transição suave ao fechar modal
+  const closeModal = useCallback(() => {
+    setIsModalClosing(true);
+    setTimeout(() => {
+      setIsModalOpen(false);
+      setIsModalClosing(false);
+    }, 300);
+  }, []);
   const handleModalOverlayClick = (e) => {
     if (e.target === e.currentTarget) {
       closeModal();
     }
   };
-
-  const filteredGames = games.filter(game =>
-    game.nome && game.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  // ✅ Filtragem com debounce
+  const filteredGames = useMemo(() =>
+    games.filter(game =>
+      game.nome && game.nome.toLowerCase().includes(debouncedSearch.toLowerCase())
+    ),
+    [games, debouncedSearch]
   );
-
   const handleVibrateClick = (action) => {
     if (navigator.vibrate) navigator.vibrate(50);
     action();
   };
-
-  // Preload games on component mount
   useEffect(() => {
     fetchGames();
+    // Garante shimmer mínimo de 1s
+    const timer = setTimeout(() => setShimmerMinReady(true), 1000);
+    return () => clearTimeout(timer);
   }, []);
-
-  const buttonText = games.length > 0 ? `${games.length} Games Cadastrados` : 'Games Cadastrados';
-
+  const gamesLoaded = hasLoadedGames && shimmerMinReady && games.length > 0;
+  const buttonText = gamesLoaded ? `${games.length} Games Cadastrados` : 'Games Cadastrados';
   return (
     <div className={styles['sp-wrap']}>
       <Particles />
@@ -392,24 +384,18 @@ const fetchGames = async () => {
             </div>
           </div>
         </div>
-
-        
-
-        {/* ✅ MOSTRA SKELETON ENQUANTO imageLoading FOR TRUE COM TRANSIÇÃO */}
         {imageLoading && gameAtual ? (
           <div className={styles['sp-skeleton-wrapper']}>
             <SkeletonGameCard />
           </div>
         ) : null}
-
-        {/* ✅ MOSTRA IMAGEM REAL QUANDO NÃO ESTÁ CARREGANDO COM GRACEFUL TRANSITION */}
         {gameAtual?.imagem && !imageLoading && (
           <div className={styles['sp-game-card-wrapper']}>
             <div className={styles['sp-game-card']}>
               <div className={styles['sp-img-frame']}>
-                <img 
+                <img
                   ref={imgRef}
-                  src={gameAtual.imagem} 
+                  src={gameAtual.imagem}
                   alt={gameAtual.nome}
                   onLoad={handleImageLoad}
                   onError={handleImageError}
@@ -421,25 +407,23 @@ const fetchGames = async () => {
             </div>
           </div>
         )}
-
-        {/* ✅ TAG INVISÍVEL PARA PRÉ-CARREGAR A IMAGEM */}
         {gameAtual?.imagem && imageLoading && (
-          <img 
-            src={gameAtual.imagem} 
+          <img
+            src={gameAtual.imagem}
             alt="preload"
             style={{ display: 'none' }}
             onLoad={handleImageLoad}
             onError={handleImageError}
           />
         )}
-
         {gameAtual && !enviarBloqueado && (
           <button
-            className={`${styles['sp-btn']} ${styles['sp-btn-green']}`}
+            className={`${styles['sp-btn']} ${styles['sp-btn-green']} ${styles['sp-btn-pixels']}`}
             onClick={() => handleVibrateClick(enviar)}
             disabled={loading}
           >
-            {loading ? <span className={styles['sp-dots']}>ENVIANDO<span>.</span><span>.</span><span>.</span></span> : '⭐ ENVIAR SUGESTÃO'}
+            <span className={styles['sp-pixel-overlay']} />
+            {loading ? <span className={styles['sp-dots']}>ENVIANDO<span>.</span><span>.</span><span>.</span></span> : 'ENVIAR GAME'}
           </button>
         )}
         <footer className={styles['sp-footer']}>
@@ -447,15 +431,15 @@ const fetchGames = async () => {
             {[...Array(8)].map((_, i) => <span key={i} className={styles['sp-px']} />)}
           </div>
           <p className={styles['sp-footer-text']}>🎮 STEAM PROMO 2.0 🛡</p>
-
           <button
             className={styles['sp-btn-float-games-mobile']}
             onClick={() => handleVibrateClick(openModal)}
           >
-            {buttonText}
+            {!gamesLoaded ? (
+              <span className={styles['sp-btn-shimmer-placeholder']}>&nbsp;</span>
+            ) : buttonText}
           </button>
         </footer>
-
         <div className={styles['sp-pixels-desktop']}>
           {[...Array(8)].map((_, i) => <span key={i} className={styles['sp-px']} />)}
         </div>
@@ -463,23 +447,37 @@ const fetchGames = async () => {
           className={styles['sp-btn-float-games-desktop']}
           onClick={() => handleVibrateClick(openModal)}
         >
-          {buttonText}
+          {!gamesLoaded ? (
+            <span className={styles['sp-btn-shimmer-placeholder']}>&nbsp;</span>
+          ) : buttonText}
         </button>
       </div>
+      {/* ✅ MODAL COM SHIMMER + MELHORIAS UX */}
       {isModalOpen && (
-        <div className={styles['sp-modal-overlay']} onClick={handleModalOverlayClick}>
-          <div className={styles['sp-modal']} ref={modalRef} onClick={(e) => e.stopPropagation()}>
+        <div
+          className={`${styles['sp-modal-overlay']} ${isModalClosing ? styles['sp-modal-overlay-exit'] : ''}`}
+          onClick={handleModalOverlayClick}
+        >
+          <div
+            className={`${styles['sp-modal']} ${isModalClosing ? styles['sp-modal-exit'] : ''}`}
+            ref={modalRef}
+            onClick={(e) => e.stopPropagation()}
+          >
             <span className={`${styles['sp-modal-corner']} ${styles['sp-modal-tl']}`} />
             <span className={`${styles['sp-modal-corner']} ${styles['sp-modal-tr']}`} />
             <span className={`${styles['sp-modal-corner']} ${styles['sp-modal-bl']}`} />
             <span className={`${styles['sp-modal-corner']} ${styles['sp-modal-br']}`} />
-
             <button className={styles['sp-modal-close']} onClick={closeModal}>✕</button>
+            {debouncedSearch && !modalLoading && filteredGames.length > 0 && (
+              <span className={styles['sp-search-counter']}>
+                {filteredGames.length} game{filteredGames.length !== 1 ? 's' : ''} encontrado{filteredGames.length !== 1 ? 's' : ''}
+              </span>
+            )}
             <h2 className={styles['sp-modal-title']}>Games Cadastrados</h2>
             <input
               className={styles['sp-modal-search']}
               type="text"
-              placeholder="Buscar game..."
+              placeholder="🔍 Buscar game..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -487,10 +485,14 @@ const fetchGames = async () => {
               {modalLoading ? (
                 <SkeletonGamesList />
               ) : (
-                <ul className={styles['sp-modal-list']}>
+                <ul className={styles['sp-modal-list']} ref={listRef}>
                   {filteredGames.length > 0 ? (
                     filteredGames.map((game, index) => (
-                      <li key={index}>
+                      <li
+                        key={`${shimmerKey}-${index}`}
+                        className={`${styles['sp-search-shimmer']} ${debouncedSearch ? styles['sp-stagger-item'] : ''}`}
+                        style={debouncedSearch ? { animationDelay: `${index * 0.04}s` } : undefined}
+                      >
                         <a href={game.url} target="_blank" rel="noopener noreferrer">
                           <img src={game.imagem} alt={game.nome} className={styles['sp-game-img']} />
                           {game.nome}
@@ -498,7 +500,11 @@ const fetchGames = async () => {
                       </li>
                     ))
                   ) : (
-                    <li>Nenhum game encontrado.</li>
+                    <li className={styles['sp-empty-state']}>
+                      <span className={styles['sp-empty-icon']}>🎮</span>
+                      <span className={styles['sp-empty-text']}>Nenhum game encontrado</span>
+                      <span className={styles['sp-empty-hint']}>Tente outro termo de busca</span>
+                    </li>
                   )}
                 </ul>
               )}
@@ -509,5 +515,4 @@ const fetchGames = async () => {
     </div>
   );
 }
-
 export default App;
