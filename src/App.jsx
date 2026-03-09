@@ -245,35 +245,36 @@ function App() {
     }
   };
 
-  const fetchGames = async () => {
-    try {
-      const response = await fetch(
-        'https://cdn.jsdelivr.net/gh/7fases/steam-promo@main/games.json',
-        {
-          headers: {
-            'Accept': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Arquivo não encontrado`);
+const fetchGames = async () => {
+  try {
+    const response = await fetch(
+      'https://cdn.jsdelivr.net/gh/7fases/steam-promo@main/games.json',
+      {
+        headers: {
+          'Accept': 'application/json',
+        },
+        cache: 'no-cache'  // Adicione isso aqui
       }
+    );
 
-      const gamesData = await response.json();
-
-      if (!Array.isArray(gamesData)) {
-        throw new Error('Formato de dados inválido');
-      }
-
-      setGames(gamesData);
-      setHasLoadedGames(true);
-    } catch (error) {
-      console.error('❌ Erro ao carregar games:', error);
-      mostrarMensagem(`❌ Erro ao carregar games: ${error.message}`, 'erro');
-      setGames([]);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: Arquivo não encontrado`);
     }
-  };
+
+    const gamesData = await response.json();
+
+    if (!Array.isArray(gamesData)) {
+      throw new Error('Formato de dados inválido');
+    }
+
+    setGames(gamesData);
+    setHasLoadedGames(true);
+  } catch (error) {
+    console.error('❌ Erro ao carregar games:', error);
+    mostrarMensagem(`❌ Erro ao carregar games: ${error.message}`, 'erro');
+    setGames([]);
+  }
+};
 
   const openModal = async () => {
     setIsModalOpen(true);
