@@ -2383,5 +2383,40 @@
     "nome": "Dragon's Dogma 2",
     "url": "https://store.steampowered.com/app/2054970",
     "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2054970/header.jpg?t=1768870094"
+  },
+  {
+    "nome": "Sea of Stars",
+    "url": "https://store.steampowered.com/app/1244090",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1244090/header.jpg?t=1756414027"
+  },
+  {
+    "nome": "Biped 2",
+    "url": "https://store.steampowered.com/app/2560240",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2560240/header.jpg?t=1771409472"
+  },
+  {
+    "nome": "Pipistrello and the Cursed Yoyo",
+    "url": "https://store.steampowered.com/app/2870350",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2870350/header.jpg?t=1769631666"
+  },
+  {
+    "nome": "Star Wars Outlaws",
+    "url": "https://store.steampowered.com/app/2842040",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2842040/header.jpg?t=1773407100"
+  },
+  {
+    "nome": "Resident Evil",
+    "url": "https://store.steampowered.com/app/304240",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/304240/header.jpg?t=1768956401"
+  },
+  {
+    "nome": "STARSEEKER: Astroneer Expeditions",
+    "url": "https://store.steampowered.com/app/1454370",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1454370/a6b73da992124f3b7cf5c8869fc0192fc4b94d3d/header.jpg?t=1773678587"
+  },
+  {
+    "nome": "Call of Duty: Modern Warfare",
+    "url": "https://store.steampowered.com/app/2000950",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2000950/header.jpg?t=1678294805"
   }
 ]
