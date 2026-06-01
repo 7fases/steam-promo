@@ -2488,5 +2488,65 @@
     "nome": "MARVEL Cosmic Invasion",
     "url": "https://store.steampowered.com/app/2753970",
     "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2753970/bcb8dd8a710ecd285876fd185b162f5feb545ee3/header_alt_assets_0.jpg?t=1779116512"
+  },
+  {
+    "nome": "DEATHLOOP",
+    "url": "https://store.steampowered.com/app/1252330",
+    "imagem": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1252330/header.jpg?t=1750785409"
+  },
+  {
+    "nome": "DARK SOULS: REMASTERED",
+    "url": "https://store.steampowered.com/app/570940",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/570940/header.jpg?t=1778518110"
+  },
+  {
+    "nome": "DARK SOULS II: Scholar of the First Sin",
+    "url": "https://store.steampowered.com/app/335300",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/335300/header.jpg?t=1760721873"
+  },
+  {
+    "nome": "DARK SOULS III",
+    "url": "https://store.steampowered.com/app/374320",
+    "imagem": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/374320/header.jpg?t=1748630784"
+  },
+  {
+    "nome": "Dishonored",
+    "url": "https://store.steampowered.com/app/205100",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/205100/header.jpg?t=1750785977"
+  },
+  {
+    "nome": "Dishonored: Death of the Outsider",
+    "url": "https://store.steampowered.com/app/614570",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/614570/header.jpg?t=1750785506"
+  },
+  {
+    "nome": "Root",
+    "url": "https://store.steampowered.com/app/965580",
+    "imagem": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/965580/capsule_616x353.jpg?t=1767902987"
+  },
+  {
+    "nome": "Tabletop Simulator",
+    "url": "https://store.steampowered.com/app/286160",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/286160/header.jpg?t=1772387518"
+  },
+  {
+    "nome": "Ark Nova",
+    "url": "https://store.steampowered.com/app/2438990",
+    "imagem": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2438990/4372524bdf843af739eba63e55121ea904f7c216/capsule_616x353.jpg?t=1767897183"
+  },
+  {
+    "nome": "Divinity: Original Sin The Source Saga",
+    "url": "https://store.steampowered.com/bundle/14169",
+    "imagem": "https://shared.fastly.steamstatic.com/store_item_assets/steam/bundles/14169/vugq94uy5pvzxxna/header_ratio.jpg?t=1590094499"
+  },
+  {
+    "nome": "Deep Rock Galactic: Rogue Core",
+    "url": "https://store.steampowered.com/app/2605790",
+    "imagem": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2605790/0de546326f8c36851c332a167502eab110a86def/capsule_616x353.jpg?t=1779480566"
+  },
+  {
+    "nome": "Paralives",
+    "url": "https://store.steampowered.com/app/1118520",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1118520/277ab7a2ad1bbce0f4837bb37a3c86d109bd5258/header.jpg?t=1779721278"
   }
 ]
