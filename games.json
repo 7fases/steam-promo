@@ -2548,5 +2548,45 @@
     "nome": "Paralives",
     "url": "https://store.steampowered.com/app/1118520",
     "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1118520/277ab7a2ad1bbce0f4837bb37a3c86d109bd5258/header.jpg?t=1779721278"
+  },
+  {
+    "nome": "Subnautica 2",
+    "url": "https://store.steampowered.com/app/1962700",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1962700/header.jpg?t=1779930099"
+  },
+  {
+    "nome": "Life is Strange: Before the Storm Remastered",
+    "url": "https://store.steampowered.com/app/1265930",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1265930/header.jpg?t=1748420948"
+  },
+  {
+    "nome": "Life is Strange: True Colors",
+    "url": "https://store.steampowered.com/app/936790",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/936790/header.jpg?t=1771867255"
+  },
+  {
+    "nome": "Romestead",
+    "url": "https://store.steampowered.com/app/1805320",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1805320/7ba6783ca5acd8068abd3bd924801ce173fc39e8/header.jpg?t=1780153528"
+  },
+  {
+    "nome": "PowerWash Simulator 2",
+    "url": "https://store.steampowered.com/app/2968420",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2968420/91fea40a711c5a74cce1bb1a9e05c48a379f6aa0/header.jpg?t=1777471856"
+  },
+  {
+    "nome": "Raiders of Blackveil",
+    "url": "https://store.steampowered.com/app/3352240",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3352240/66ddbc812e5eccfdf907dbd1d8ae29567f342720/header_alt_assets_1.jpg?t=1779440747"
+  },
+  {
+    "nome": "LEGO Batman: Legacy of the Dark Knight",
+    "url": "https://store.steampowered.com/app/2215200",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2215200/a07a9a6c0c9c1225f5b260b4f29fe40e6f099f6b/header.jpg?t=1779824566"
+  },
+  {
+    "nome": "007 First Light",
+    "url": "https://store.steampowered.com/app/3768760",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3768760/dbe86ebd2edb4c77d113e9e2feefeb90189fabc9/header.jpg?t=1780344100"
   }
 ]
