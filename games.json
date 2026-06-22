@@ -2588,5 +2588,15 @@
     "nome": "007 First Light",
     "url": "https://store.steampowered.com/app/3768760",
     "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3768760/dbe86ebd2edb4c77d113e9e2feefeb90189fabc9/header.jpg?t=1780344100"
+  },
+  {
+    "nome": "Pocket Bravery",
+    "url": "https://store.steampowered.com/app/1555150",
+    "imagem": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1555150/31da3e6f82fe38b7c4ae438ba54d4779913202e5/header_alt_assets_1.jpg?t=1779799747"
+  },
+  {
+    "nome": "Witchspire",
+    "url": "https://store.steampowered.com/app/2679100",
+    "imagem": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2679100/a2b28ffa98c86e31b5bc8f26392ffc7e26dc3a47/capsule_616x353_alt_assets_1.jpg?t=1781118464"
   }
 ]
